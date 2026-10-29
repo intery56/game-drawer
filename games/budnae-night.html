@@ -1,0 +1,653 @@
+<!doctype html><html><head><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script><script src="../assets/config.js"></script><script src="../assets/member.js" data-game="budnae-night"></script><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>버드내의 밤</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Sans+KR:wght@400;500;600&display=swap">
+<style>
+/* Layout: one narrow column — header, village board of 10 tiles, chronicle feed, sticky action dock. Phase (night/day) recolors the whole page. */
+:root{
+  --font-d:'Gowun Batang','Nanum Myeongjo',serif;
+  --font-b:'IBM Plex Sans KR','Apple SD Gothic Neo','Malgun Gothic',system-ui,sans-serif;
+  --bg:#10131b; --panel:#181c27; --panel2:#212635; --ink:#e7e3d8; --muted:#9196a6;
+  --line:#2a2f3e; --lamp:#e3ad4f; --lamp-ink:#1a1408; --blood:#e2705f; --good:#86b892;
+  color-scheme:dark;
+}
+:root[data-phase="day"]{
+  --bg:#e5e9e1; --panel:#f4f6f1; --panel2:#e9ede5; --ink:#1b201b; --muted:#5d665c;
+  --line:#c8cfc2; --lamp:#7f520c; --lamp-ink:#fff8ea; --blood:#a5322a; --good:#2e6a3d;
+  color-scheme:light;
+}
+html{background:var(--bg);transition:background .8s}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-b);font-size:15px;line-height:1.6;transition:background .8s,color .8s;min-height:100vh}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+.wrap{max-width:720px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible{outline:2px solid var(--lamp);outline-offset:2px}
+h1,h2,h3{font-family:var(--font-d);text-wrap:balance;margin:0}
+
+/* intro */
+#intro{padding-block:40px 60px;display:grid;gap:28px}
+.mast{display:grid;gap:10px}
+.mast .eyebrow{font-size:12px;letter-spacing:.18em;color:var(--lamp)}
+.mast h1{font-size:clamp(44px,12vw,72px);line-height:1;font-weight:700;letter-spacing:-.02em}
+.mast p{margin:0;color:var(--muted);max-width:34em;font-family:var(--font-d);font-size:17px}
+.rules{display:grid;gap:8px;margin:0;padding:0;list-style:none}
+.rules li{display:grid;grid-template-columns:5.5em 1fr;gap:12px;padding-block:10px;border-top:1px solid var(--line)}
+.rules b{font-weight:600;color:var(--lamp);font-size:13px;letter-spacing:.04em}
+.roster{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.rc{text-align:left;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px;display:grid;gap:6px;min-width:0}
+.rc .top{display:flex;gap:10px;align-items:center}
+.rc .who{min-width:0}
+.rc .n{font-family:var(--font-d);font-weight:700;font-size:16px}
+.rc .j{font-size:12px;color:var(--muted)}
+.rc .pers{font-size:12px;color:var(--muted)}
+.cta{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.stats{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+
+/* game */
+#game{display:grid;gap:14px;padding-bottom:20px}
+header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);padding-block:12px 10px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.clock{font-family:var(--font-d);font-size:20px;font-weight:700;margin-right:auto}
+.clock small{font-family:var(--font-b);font-size:12px;color:var(--muted);font-weight:400;margin-left:6px}
+.mechip{font-size:12px;padding:4px 10px;border-radius:99px;border:1px solid var(--lamp);color:var(--lamp)}
+.ghost{background:none;border:1px solid var(--line);border-radius:8px;padding:5px 10px;font-size:13px}
+.board{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+.tile{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 2px 6px;display:grid;justify-items:center;gap:3px;min-width:0;position:relative}
+.tile .n{font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.tile .j{font-size:10.5px;color:var(--muted);white-space:nowrap}
+.tile.me{border-color:var(--lamp);box-shadow:inset 0 0 0 1px var(--lamp)}
+.tile.dead{opacity:.42}
+.tile.dead .av{filter:grayscale(1)}
+.tile.dead .n{text-decoration:line-through}
+.tile.maf{opacity:1;border-color:var(--blood);box-shadow:inset 0 0 0 1px var(--blood)}
+.heat{display:flex;gap:2px;height:5px}
+.heat i{width:5px;height:5px;border-radius:50%;background:var(--blood)}
+.av{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;color:#fff;font-family:var(--font-d);font-weight:700;font-size:17px;flex:none}
+.av.sm{width:28px;height:28px;font-size:13px}
+.legend{font-size:11px;color:var(--muted);display:flex;gap:6px;align-items:center}
+.legend i{display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--blood)}
+
+.feed{display:grid;gap:10px;padding-bottom:8px}
+.e-phase{font-family:var(--font-d);font-size:22px;font-weight:700;padding-top:14px;display:flex;align-items:center;gap:10px}
+.e-phase::after{content:"";flex:1;height:1px;background:var(--line)}
+.e-sys{font-family:var(--font-d);color:var(--muted);font-size:15px}
+.e-death{font-family:var(--font-d);font-size:16px;color:var(--blood);border-left:3px solid var(--blood);padding-left:10px}
+.e-good{font-family:var(--font-d);font-size:16px;color:var(--good);border-left:3px solid var(--good);padding-left:10px}
+.e-news{background:var(--panel2);border:1px solid var(--line);padding:10px 12px;border-radius:4px;font-family:var(--font-d)}
+.e-news b{display:block;font-size:11px;letter-spacing:.2em;color:var(--lamp);font-family:var(--font-b)}
+.e-priv{border:1px dashed var(--lamp);border-radius:8px;padding:8px 12px;font-size:14px}
+.e-priv b{color:var(--lamp);font-size:11px;letter-spacing:.1em;display:block}
+.e-clue{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:8px 12px;font-size:14px}
+.e-clue b{display:block;font-size:11px;letter-spacing:.1em;color:var(--blood)}
+.say.inq .txt{font-style:italic}
+.tagl{font-size:10px;border:1px solid var(--lamp);color:var(--lamp);border-radius:99px;padding:0 6px;margin-left:4px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap}
+.tab{background:var(--panel2);border:1px solid var(--line);border-radius:99px;padding:5px 14px;font-size:13px}
+.tab[aria-selected="true"]{background:var(--lamp);border-color:var(--lamp);color:var(--lamp-ink);font-weight:600}
+.tally{display:flex;flex-wrap:wrap;gap:6px}
+.tally span{font-size:12px;background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:3px 8px;font-variant-numeric:tabular-nums}
+.notes .q{color:var(--muted);font-size:12px}
+.notes .day{font-family:var(--font-d);font-weight:700;border-top:none;padding-top:10px;color:var(--lamp)}
+.say{display:grid;grid-template-columns:28px 1fr;gap:10px;align-items:start}
+.say .body{min-width:0}
+.say .who{font-size:12px;color:var(--muted)}
+.say .who b{color:var(--ink);font-weight:600;margin-right:4px}
+.say .txt{font-family:var(--font-d);font-size:16px}
+.say.me .txt{color:var(--lamp)}
+.vote{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px;display:grid;gap:4px;font-size:13px}
+.vote .row{display:grid;grid-template-columns:5.2em 2.6em 1fr;gap:8px;font-variant-numeric:tabular-nums}
+.vote .row b{font-weight:600}
+.vote .row span{color:var(--muted)}
+
+.dock{position:sticky;bottom:0;z-index:5;background:var(--bg);border-top:1px solid var(--line);padding-block:12px calc(12px + env(safe-area-inset-bottom,0px))}
+.dock .prompt{font-family:var(--font-d);font-size:16px;margin-bottom:10px}
+.btns{display:flex;flex-wrap:wrap;gap:8px}
+.btn{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:9px 14px;font-size:14px}
+.btn.primary{background:var(--lamp);border-color:var(--lamp);color:var(--lamp-ink);font-weight:600}
+.btn small{display:block;font-size:11px;color:var(--muted)}
+.btn.primary small{color:inherit;opacity:.75}
+.chip{display:flex;align-items:center;gap:6px;background:var(--panel);border:1px solid var(--line);border-radius:99px;padding:4px 12px 4px 4px;font-size:13px}
+.chip .tag{font-size:11px;color:var(--lamp)}
+.endcard{display:grid;gap:8px;margin-bottom:12px}
+.endcard h2{font-size:28px}
+.endcard.win h2{color:var(--good)}
+.endcard.lose h2{color:var(--blood)}
+.endcard p{margin:0;font-family:var(--font-d)}
+
+.sheet{position:fixed;inset:0;z-index:20;background:rgb(0 0 0 / .45);display:flex;align-items:flex-end;justify-content:center}
+.sheet .card{background:var(--panel);color:var(--ink);width:100%;max-width:560px;border-radius:16px 16px 0 0;padding:20px max(20px,env(safe-area-inset-right,0px)) calc(24px + env(safe-area-inset-bottom,0px)) max(20px,env(safe-area-inset-left,0px));display:grid;gap:12px;max-height:80vh;overflow:auto}
+.sheet .head{display:flex;gap:12px;align-items:center}
+.sheet h3{font-size:22px}
+.sheet .meta{font-size:13px;color:var(--muted)}
+.sheet p{margin:0;font-family:var(--font-d);font-size:16px}
+.sheet .ab{font-size:13px;background:var(--panel2);padding:10px 12px;border-radius:8px}
+.sheet .ab b{color:var(--lamp)}
+.notes{display:grid;gap:6px;margin:0;padding:0;list-style:none;font-size:14px}
+.notes li{border-top:1px solid var(--line);padding-top:6px}
+@media (prefers-reduced-motion:no-preference){.feed>*{animation:rise .35s ease both}}
+@keyframes rise{from{opacity:.2;transform:translateY(4px)}to{opacity:1;transform:none}}
+@media (max-width:420px){.tile .j{font-size:10px}.av{width:32px;height:32px;font-size:15px}}
+</style>
+
+<div class="wrap">
+  <section id="intro">
+    <div class="mast">
+      <span class="eyebrow">혼자 하는 마피아 · 1인 추리</span>
+      <h1>버드내의 밤</h1>
+      <p>안개 낀 산골 마을 버드내. 열 명의 주민 가운데 한 명이 살인자다. 당신은 매 판 그중 한 사람이 되어, 나머지 아홉과 함께 낮에는 토론하고 밤에는 살아남는다.</p>
+    </div>
+    <ul class="rules">
+      <li><b>배정</b><span>매 판 당신이 될 주민과 마피아가 무작위로 정해진다. 당신이 마피아가 되는 일은 없다.</span></li>
+      <li><b>직업</b><span>경찰·의사·야경꾼·기자는 능력이 있다. 당신이 그 직업을 맡으면 그 능력을 직접 쓴다. 나머지 주민도 각자의 능력을 알아서 쓴다.</span></li>
+      <li><b>위장</b><span>마피아가 능력 직업을 가진 판에는 그 능력이 진짜로 작동하지 않는다. 마피아는 그 직업을 이용해 거짓 정보를 퍼뜨린다.</span></li>
+      <li><b>밤</b><span>마피아가 한 명을 습격한다. 의사는 지키고, 경찰은 조사하고, 야경꾼은 누가 밤에 나갔는지 본다.</span></li>
+      <li><b>낮</b><span>주민들이 토론하고, 당신도 한 마디 할 수 있다. 투표로 한 명을 처형한다. 동표면 아무도 처형되지 않는다.</span></li>
+      <li><b>단서</b><span>살인 현장에는 물건이 남는다. 진짜 흔적과 심어 둔 흔적이 섞여 있다. 주민마다 남기는 흔적이 다르다.</span></li>
+      <li><b>탐문</b><span>낮마다 두 번, 주민을 찾아가 알리바이와 목격담을 물을 수 있다. 마피아는 거짓말을 한다.</span></li>
+      <li><b>승패</b><span>마피아를 처형하면 승리. 당신이 죽거나 마을에 두 명만 남으면 패배.</span></li>
+    </ul>
+    <h2 style="font-size:20px">마을 사람들</h2>
+    <div class="roster" id="roster"></div>
+    <div class="cta">
+      <button class="btn primary" id="startBtn">첫날 밤 시작</button>
+      <span class="stats" id="stats"></span>
+    </div>
+  </section>
+
+  <section id="game" hidden>
+    <header class="top">
+      <div class="clock" id="clock">1일차</div>
+      <span class="mechip" id="mechip"></span>
+      <button class="ghost" id="notesBtn">수첩</button>
+      <button class="ghost" id="cluesBtn">단서</button>
+      <button class="ghost" id="interBtn">탐문</button>
+    </header>
+    <div class="board" id="board"></div>
+    <div class="legend"><i></i> 붉은 점은 마을 여론이 그 사람을 얼마나 의심하는지 보여 준다. 칸을 누르면 그 사람의 이야기가 나온다.</div>
+    <div class="feed" id="feed" aria-live="polite"></div>
+  </section>
+</div>
+<div class="dock" id="dock" hidden><div class="wrap" id="dockIn"></div></div>
+<div class="sheet" id="sheet" hidden><div class="card" id="sheetCard"></div></div>
+
+<script>
+const V=[
+{name:'한도윤',job:'경찰',role:'police',age:41,hue:212,pers:'원칙주의자 · 냉정함',tie:'기자 윤채아와 자주 부딪친다.',
+ story:'서울 강력계 형사였다. 잠복 중 파트너를 잃은 뒤 사표를 내고 고향 버드내로 돌아와 주재소를 지킨다. 증거 없이는 아무도 믿지 않는다.',
+ p:{cred:.4,logic:.9,band:.2,vol:.3,talk:.7},
+ L:{accuse:['{t} 씨, 동선이 맞지 않습니다. 해명하세요.','감으로 하는 말이 아닙니다. {t} 씨 쪽이 제일 이상합니다.'],
+ defend:['저를 의심하는 건 자유입니다. 다만 그동안 진짜는 웃고 있겠죠.','제 수사 기록은 주재소에 다 있습니다. 숨길 게 없습니다.'],
+ idle:['다들 흥분하지 마세요. 사실만 봅시다.','어젯밤 일, 순서대로 다시 정리해 봅시다.','누가 거짓말을 하는지는 발표가 쌓이면 드러납니다.','표는 근거가 있는 사람에게만 주세요.'],
+ mourn:['{v} 씨는 제가 지켜야 했던 사람입니다.'],
+ last:['제가 틀린 게 아니길 빕니다.']}},
+{name:'서미란',job:'의사',role:'doctor',age:52,hue:352,pers:'다정함 · 단호함',tie:'교사 문지헌이 깊이 신뢰한다.',
+ story:'버드내 진료소의 유일한 의사. 10년 전 남편을 병으로 잃은 뒤로 마을 사람 모두를 가족처럼 돌본다. 누가 아픈지, 누가 밤잠을 설치는지 다 안다.',
+ p:{cred:.7,logic:.6,band:.4,vol:.3,talk:.6},
+ L:{accuse:['{t} 씨, 요즘 안색이 이상했어요. 뭔가 숨기고 있죠?','미안하지만 {t} 씨 말은 앞뒤가 안 맞아요.'],
+ defend:['저는 사람을 살리는 사람이에요. 죽이는 쪽이 아니라요.','밤새 진료소 불이 켜져 있었던 거, 다들 보셨잖아요.'],
+ idle:['다들 잠은 좀 잤어요? 지친 머리로는 엉뚱한 사람을 잡아요.','서두르지 말아요. 한 번 잘못 고르면 되돌릴 수 없어요.','떨리면 숨부터 크게 쉬어요. 다들 너무 몰아붙여요.','의사로서 말하는데, 어젯밤 상처는 아는 사람 솜씨였어요.'],
+ mourn:['{v} 씨, 지난주에도 진료소에 왔었는데….'],
+ last:['진료소 약장 열쇠는 화분 밑에 있어요.']}},
+{name:'오만석',job:'야경꾼',role:'watch',age:63,hue:32,pers:'과묵함 · 날카로운 관찰력',tie:'주막 주인 백승호와 술친구다.',
+ story:'30년을 원양어선에서 보냈다. 배에서 내린 뒤로는 등불 하나 들고 밤마다 마을 골목을 돈다. 말은 적지만 본 것은 잊지 않는다.',
+ p:{cred:.3,logic:.8,band:.1,vol:.2,talk:.45},
+ L:{accuse:['{t}, 자네 걸음이 요즘 무거워.','난 본 대로만 말하오. {t}, 수상해.'],
+ defend:['밤새 골목을 돈 게 나요. 의심하려면 하시오.','난 그 시간에 골목 끝 다리 위에 있었소.'],
+ idle:['바람이 바뀌었소.','말 많은 사람부터 보시오. 거짓말은 길어지는 법이오.','밤바다보다 이 마을 골목이 더 무섭군.','오늘 밤도 등불 들고 나가겠소.'],
+ mourn:['{v}, 어제 저녁에만 해도 인사를 했는데.'],
+ last:['등불은 꺼뜨리지 마시오.']}},
+{name:'윤채아',job:'기자',role:'reporter',age:29,hue:282,pers:'호기심 많음 · 직설적',tie:'경찰 한도윤과 사이가 나쁘다.',
+ story:'서울 일간지에서 무리한 특종 취재로 해고됐다. 지금은 혼자 마을 신문 「버드내 소식」을 찍어 돌린다. 이번 사건이 인생 기사가 될 거라 믿는다.',
+ p:{cred:.5,logic:.7,band:.3,vol:.5,talk:.8},
+ L:{accuse:['기자 촉이에요. {t} 씨, 오늘 말이 제일 많이 바뀌었어요.','{t} 씨, 인터뷰 하나만 하죠. 어젯밤 몇 시에 주무셨어요?'],
+ defend:['저를 몰아내면 이 사건은 아무도 안 써요. 범인이 바라는 게 그거고요.','의심할 거면 증거를 가져오세요. 기자한테 그건 통하지 않아요.'],
+ idle:['전부 받아 적고 있어요. 나중에 말 바꾸면 다 티 나요.','이상하지 않아요? 아무도 비명을 못 들었다는 게.','호외 찍을 종이가 모자랄 지경이네요.','누군가는 지금 이 대화를 즐기고 있을 거예요.'],
+ mourn:['{v} 씨 인터뷰, 다음 호에 실으려고 했는데.'],
+ last:['원고는 책상 두 번째 서랍에 있어요.']}},
+{name:'강철구',job:'대장장이',role:null,age:38,hue:14,pers:'다혈질 · 의리파',tie:'제빵사 강보람의 친오빠.',
+ story:'아버지에게 물려받은 대장간을 지킨다. 성질은 불같지만 동생 보람이 일이라면 물불을 안 가린다. 마을 연장은 전부 그의 손을 거쳤다.',
+ p:{cred:.6,logic:.3,band:.6,vol:.8,talk:.8},
+ L:{accuse:['{t}! 너지? 눈 피하는 거 다 봤다!','돌려 말 안 해. {t}, 난 네가 제일 수상해.'],
+ defend:['뭐? 나? 내 망치는 쇠나 두드리지 사람 안 쳐!','나 어젯밤 대장간에서 밤새 쇠 두드렸어. 소리 다 들렸잖아!'],
+ idle:['답답해 죽겠네. 빨리 좀 정하자고!','보람이 건드리는 놈은 내가 가만 안 둬.','말만 하지 말고 다들 손 좀 들어 보라고.','이러다 오늘 밤에 또 누가 죽어.'],
+ mourn:['{v}…! 망치 부탁하러 온다더니.'],
+ last:['보람아, 대장간 불 꺼지지 않게 해라.']}},
+{name:'강보람',job:'제빵사',role:null,age:31,hue:44,pers:'밝음 · 눈치 빠름',tie:'대장장이 강철구의 동생. 목수 류하린과 친하다.',
+ story:'새벽 네 시면 빵을 굽는다. 마을에서 가장 먼저 깨어 있는 사람이라 누가 새벽에 돌아다니는지 은근히 안다. 오빠 철구의 불같은 성격을 늘 말린다.',
+ p:{cred:.6,logic:.6,band:.4,vol:.4,talk:.7},
+ L:{accuse:['새벽에 반죽하다 봤는데, {t} 씨 집에 불이 켜져 있었어요.','{t} 씨, 아까부터 계속 남 얘기만 하시네요?'],
+ defend:['저 새벽마다 오븐 앞에 있어요. 빵 냄새 다 맡으셨잖아요.','저 진짜 아니에요. 오빠한테 물어보세요.'],
+ idle:['오빠, 좀 진정해. 소리 지른다고 범인이 나와?','오늘은 빵을 못 구웠어요. 손이 떨려서요.','저 아침마다 빵 돌리잖아요. 집집마다 분위기가 달라요.','다들 조금씩 말이 바뀌는 것 같아요.'],
+ mourn:['{v} 씨는 매일 식빵 하나씩 사 갔는데….'],
+ last:['오븐에 반죽 남아 있어요. 버리지 마요.']}},
+{name:'문지헌',job:'교사',role:null,age:35,hue:172,pers:'논리적 · 신중함',tie:'의사 서미란을 깊이 신뢰한다.',
+ story:'학생이 셋 남은 버드내 분교의 마지막 선생님. 폐교 통보를 막으려고 2년째 버티고 있다. 사람 말의 앞뒤를 맞춰 보는 게 습관이다.',
+ p:{cred:.5,logic:.95,band:.2,vol:.2,talk:.6},
+ L:{accuse:['정리해 보면 결론은 하나예요. {t} 씨가 제일 맞지 않아요.','{t} 씨 진술은 어제와 오늘이 달라요. 설명이 필요합니다.'],
+ defend:['감정 말고 근거로 말해 주세요. 제가 왜 범인이죠?','저는 처음부터 같은 말만 했어요. 기록을 보세요.'],
+ idle:['어젯밤 피해자가 누굴 의심하고 있었는지부터 봅시다.','발표된 정보끼리 서로 맞는지 확인해야 해요.','누가 누구를 감싸는지도 기록해 둡시다.','오늘 처형이 틀리면 내일은 더 어려워져요.'],
+ mourn:['{v} 씨가 마지막으로 한 말을 다들 기억하세요?'],
+ last:['아이들한테는 선생님이 멀리 갔다고 해 주세요.']}},
+{name:'박순자',job:'과수원 농부',role:null,age:72,hue:96,pers:'고집 셈 · 소문을 좋아함',tie:'외지인 류하린과 빚 소문이 도는 백승호를 못 믿는다.',
+ story:'버드내에서 나고 자란 토박이. 사과 과수원을 50년째 일군다. 마을 사정은 다 꿰고 있다고 자부하지만 소문과 사실을 잘 구분하지 못한다.',
+ p:{cred:.8,logic:.2,band:.7,vol:.7,talk:.9},
+ L:{accuse:['내 진작 알아봤어. {t}, 저 사람 눈빛이 영 글렀어.','동네 사람들 다 하는 말이 있어. {t이} 수상하다고.'],
+ defend:['내가 이 마을에서 칠십 년을 살았어! 나를 의심해?','칠십 년 산 늙은이가 무슨 힘으로 사람을 해쳐!'],
+ idle:['옛날엔 이런 일 없었어. 외지 사람들 들어오고부터야.','에휴, 사과 딸 철에 이게 무슨 난리여.','우리 영감 살아 있을 땐 이 마을이 얼마나 조용했는데.','내 말 들어. 사람은 얼굴에 다 써 있어.'],
+ mourn:['아이고, {v}… 이게 무슨 일이여.'],
+ last:['과수원은 우리 손주한테 줘.']}},
+{name:'백승호',job:'주막 주인',role:null,age:45,hue:322,pers:'능글맞음 · 사교적',tie:'야경꾼 오만석과 술친구. 읍내에 빚이 있다는 소문이 있다.',
+ story:'마을 하나뿐인 주막 「버들집」의 주인. 누구와도 술잔을 나누지만 속은 아무도 모른다. 읍내에 빚이 있다는 소문이 돈다.',
+ p:{cred:.5,logic:.5,band:.5,vol:.5,talk:.8},
+ L:{accuse:['이건 술값 걸고 하는 말인데, {t} 씨 쪽이 영 냄새가 나요.','{t} 씨, 엊그제 우리 집에서 한잔하고 한 말 기억나요?'],
+ defend:['에이, 저 같은 장사꾼이 손님을 줄여서 뭐 하겠어요.','제가 장사꾼이지 살인자는 아니에요. 장부 보면 다 나와요.'],
+ idle:['다들 한잔하고 머리 좀 식히고 얘기합시다.','사람 속은 술이 들어가야 보이는 건데 말이죠.','오늘 밤엔 문 단단히 걸어 잠그쇼.','술값은 나중에 받을게요. 일단 살고 봅시다.'],
+ mourn:['{v} 씨 외상이 아직 남았는데… 이제 못 받겠네.'],
+ last:['외상 장부는 태워 주쇼. 다들 편하게.']}},
+{name:'류하린',job:'목수',role:null,age:27,hue:134,pers:'소심함 · 착함',tie:'2년 전 이사 온 외지인. 강보람과 친하다.',
+ story:'2년 전 도시에서 혼자 이사 온 외지인. 마을의 낡은 지붕과 다리를 말없이 고쳐 왔다. 왜 이 시골로 왔는지는 아무에게도 말하지 않았다.',
+ p:{cred:.7,logic:.5,band:.6,vol:.4,talk:.45},
+ L:{accuse:['저, 저기… {t} 씨가 좀 이상한 것 같아요.','말하기 무섭지만, {t} 씨 말에 구멍이 있어요.'],
+ defend:['제가 외지인이라서 그러시는 거죠? 전 아니에요.','저 밤에는 공방에서 나간 적 없어요. 톱밥이 그대로예요.'],
+ idle:['다들 무서운 건 아는데, 서로 탓만 하면 안 될 것 같아요.','제가 고친 다리가 있어요. 거기 발자국이 남아 있을지도 몰라요.','저는 그냥 다들 살았으면 좋겠어요.','밤마다 지붕 위에서 소리가 나요. 바람이겠죠?'],
+ mourn:['{v} 씨 집 대문, 지난달에 제가 고쳐 드렸는데….'],
+ last:['저는 이 마을이 좋았어요.']}}
+];
+const VOUCH=['{t} 씨는 아닙니다. 제가 봐 온 바로는요.','{t} 씨는 제가 오래 봐 왔어요. 그럴 사람 아니에요.','{t이}? 그 사람은 아니오.','{t} 씨는 아니에요. 제 취재 노트가 증명해요.','{t} 건드리지 마! 그럴 사람 아니야.','{t} 씨는 아니에요. 제가 제일 잘 알아요.','{t} 씨는 근거 없이 몰리고 있어요.','{t이} 그럴 리가 있나.','에이, {t} 씨는 아니에요. 제가 보증하죠.','{t} 씨는… 아닐 거예요. 착한 사람이에요.'];
+V.forEach((v,i)=>{v.L.vouch=[VOUCH[i]]});
+const ABILITY={
+ police:'밤마다 한 명을 조사해 마피아인지 알아낸다. 아침에 결과를 발표한다.',
+ doctor:'밤마다 한 명을 지킨다. 지킨 사람이 습격당하면 살아남는다. 자신을 지켜도 된다.',
+ watch:'밤마다 한 집을 지켜보고 그 사람이 밤에 집을 나갔는지 본다. 마피아뿐 아니라 의사·경찰·기자도 밤에 움직인다.',
+ reporter:'한 판에 한 번, 밤에 한 명을 취재해 다음 날 아침 호외로 마피아인지 공개한다.',
+ none:'특별한 능력은 없다. 대신 말과 표로 마을을 움직인다.'
+};
+// relationships (trust 0..1)
+const REL=V.map(()=>V.map(()=>.6));
+const setRel=(a,b,v,both=true)=>{REL[a][b]=v;if(both)REL[b][a]=v};
+setRel(4,5,1);setRel(0,3,.4);setRel(2,8,.85);setRel(6,1,.9,false);setRel(5,9,.85);
+setRel(7,9,.35,false);setRel(7,8,.35,false);V.forEach((_,j)=>{REL[1][j]=Math.max(REL[1][j],.7)});
+
+const $=s=>document.querySelector(s);
+const fast=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const sleep=ms=>new Promise(r=>setTimeout(r,fast||(G&&G.auto)?0:ms));
+const R=(a,b)=>a+Math.random()*(b-a);
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
+function argmax(arr,f){let b=null,bv=-1e9;for(const x of arr){const v=f(x);if(v>bv){bv=v;b=x}}return b}
+function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const k=Math.floor(Math.random()*(i+1));[a[i],a[k]]=[a[k],a[i]]}return a}
+function wpick(items,ws){let s=ws.reduce((x,y)=>x+y,0),r=Math.random()*s;for(let k=0;k<items.length;k++){r-=ws[k];if(r<=0)return items[k]}return items[items.length-1]}
+function hasB(s){const c=s.charCodeAt(s.length-1);return c>=0xAC00&&c<=0xD7A3&&(c-0xAC00)%28!==0}
+function jo(n,t){const b=hasB(n);return n+({이:b?'이':'가',은:b?'은':'는',을:b?'을':'를',과:b?'과':'와'})[t]}
+const nm=i=>V[i].name, sh=i=>V[i].name.slice(1);
+const roleIdx=r=>V.findIndex(v=>v.role===r);
+function callName(sp,t){if(sp===5&&t===4)return'오빠';if(sp===4&&t===5)return'보람이';return null}
+const addr=(sp,t)=>callName(sp,t)||sh(t)+' 씨';
+function fill(s,t,sp,tok='t'){const c=callName(sp,t),n=c||sh(t);let o=s.replace(new RegExp('\\{'+tok+'(이|은|을|과)?\\}','g'),(m,p)=>p?jo(n,p):n);if(c)o=o.split(c+' 씨').join(c);return o}
+const MORE_DEF={yo:['아까도 말했지만, 저는 아니에요.','몇 번을 물어도 대답은 같아요. 저 아니에요.'],ban:['몇 번을 말해. 나 아니라고.','같은 말 또 하게 하지 마. 나 아니야.'],hao:['몇 번이고 말하지만, 나는 아니오.','더 할 말 없소. 나는 아니오.']};
+function line(i,kind,t,tok){let opts=V[i].L[kind].map(x=>t!=null?fill(x,t,i,tok):x);if(kind==='defend')opts=opts.concat(MORE_DEF[STYLE[i]]);const fresh=opts.filter(x=>!G.used.has(G.day+'|'+i+'|'+x));const fresher=fresh.filter(x=>!G.used.has((G.day-1)+'|'+i+'|'+x));const x=pick(fresher.length?fresher:fresh.length?fresh:opts);G.used.add(G.day+'|'+i+'|'+x);return x}
+
+let G=null;
+const alive=()=>V.map((_,i)=>i).filter(i=>G.alive[i]);
+const npcs=()=>alive().filter(i=>i!==G.player);
+function groupSus(j){const vs=npcs().filter(i=>i!==j);if(!vs.length)return 0;return vs.reduce((s,i)=>s+G.sus[i][j],0)/vs.length}
+function trust(i,s){const base=s===G.player?.6:G.rel[i][s];return clamp(base*(1-G.sus[i][s]/120),.05,1)}
+function bump(i,j,d){if(i===j)return;G.sus[i][j]=clamp(G.sus[i][j]+d,0,100)}
+function syncKnown(){const P=roleIdx('police');if(P===G.mafia||P===G.player)return;for(const t in G.polKnown)G.sus[P][t]=G.polKnown[t]?100:0}
+
+// ---------- stats ----------
+function getStats(){try{return JSON.parse(localStorage.getItem('budnae-stats'))||{w:0,l:0}}catch(e){return{w:0,l:0}}}
+function addStat(win){const s=getStats();win?s.w++:s.l++;try{localStorage.setItem('budnae-stats',JSON.stringify(s))}catch(e){}}
+function renderStats(){const s=getStats();$('#stats').textContent=(s.w+s.l)?`지금까지 ${s.w}승 ${s.l}패`:''}
+
+// ---------- rendering ----------
+function avatar(i,sm){const d=document.createElement('span');d.className='av'+(sm?' sm':'');d.style.background=`hsl(${V[i].hue} 38% 42%)`;d.textContent=V[i].name[1];return d}
+function renderRoster(){const r=$('#roster');r.innerHTML='';V.forEach((v,i)=>{const b=document.createElement('button');b.className='rc';
+ const top=document.createElement('div');top.className='top';top.append(avatar(i,true));const w=document.createElement('div');w.className='who';w.innerHTML=`<div class="n">${v.name}</div><div class="j">${v.job} · ${v.age}세</div>`;top.append(w);
+ const p=document.createElement('div');p.className='pers';p.textContent=v.pers;b.append(top,p);b.onclick=()=>openProfile(i);r.append(b)})}
+function renderBoard(reveal){if(reveal===undefined)reveal=G&&G.reveal;const b=$('#board');b.innerHTML='';V.forEach((v,i)=>{const t=document.createElement('button');
+ t.className='tile'+(!G.alive[i]?' dead':'')+(i===G.player?' me':'')+(reveal&&i===G.mafia?' maf':'');
+ t.setAttribute('aria-label',`${v.name}, ${v.job}${G.alive[i]?'':', 사망'}`);
+ t.append(avatar(i));const n=document.createElement('span');n.className='n';n.textContent=v.name;const j=document.createElement('span');j.className='j';
+ j.textContent=reveal&&i===G.mafia?'마피아':(G.alive[i]?(i===G.player?'나 · ':'')+v.job:'✕ '+v.job);
+ const h=document.createElement('span');h.className='heat';
+ if(G.alive[i]&&!reveal){const g=groupSus(i);const n2=g>55?3:g>40?2:g>28?1:0;for(let k=0;k<n2;k++)h.append(document.createElement('i'))}
+ t.append(n,j,h);t.onclick=()=>openProfile(i);b.append(t)})}
+function renderTop(){$('#clock').innerHTML=`${G.day}일차<small>${G.phase==='night'?'밤':'낮'}</small>`;$('#mechip').textContent=`나: ${nm(G.player)} · ${V[G.player].job}`}
+function setPhase(p){G.phase=p;document.documentElement.dataset.phase=p;renderTop()}
+function add(e){const f=$('#feed');let el=document.createElement('div');
+ if(e.k==='say'){el.className='say'+(e.who===G.player?' me':'');el.append(avatar(e.who,true));const body=document.createElement('div');body.className='body';
+  if(e.tag)el.classList.add('inq');body.innerHTML=`<div class="who"><b>${nm(e.who)}</b>${V[e.who].job}${e.who===G.player?' · 나':''}${e.tag?' <span class="tagl">'+e.tag+'</span>':''}</div>`;const tx=document.createElement('div');tx.className='txt';tx.textContent=e.text;body.append(tx);el.append(body)}
+ else if(e.k==='vote'){el.className='vote';el.innerHTML='<div style="font-weight:600">투표 결과</div>'+e.rows.map(r=>`<div class="row"><b>${r.n}</b><span>${r.c}표</span><span>${r.v}</span></div>`).join('')}
+ else if(e.k==='news'){el.className='e-news';el.innerHTML=`<b>버드내 소식 · 호외</b>`;el.append(document.createTextNode(e.text))}
+ else if(e.k==='clue'){el.className='e-clue';el.innerHTML='<b>현장 흔적</b>';el.append(document.createTextNode(e.text))}
+ else if(e.k==='priv'){el.className='e-priv';el.innerHTML='<b>나만 아는 사실</b>';el.append(document.createTextNode(e.text))}
+ else{el.className='e-'+e.k;el.textContent=e.text}
+ f.append(el);requestAnimationFrame(()=>el.scrollIntoView({block:'end',behavior:fast?'auto':'smooth'}))}
+async function show(list){setDock(null);for(const e of list){add(e);await sleep(e.k==='phase'?650:430)}renderBoard()}
+function setDock(prompt,btns,chips){const d=$('#dockIn');d.innerHTML='';$('#dock').hidden=false;
+ if(prompt===null){d.innerHTML='<div class="prompt" style="color:var(--muted)">…</div>';return}
+ if(prompt){const p=document.createElement('div');p.className='prompt';p.textContent=prompt;d.append(p)}
+ const w=document.createElement('div');w.className='btns';
+ (chips||[]).forEach(c=>{const b=document.createElement('button');b.className='chip';b.append(avatar(c.i,true));const s=document.createElement('span');s.textContent=sh(c.i)+(c.i===G.player?' (나)':'');b.append(s);
+  if(c.tag){const t=document.createElement('span');t.className='tag';t.textContent=c.tag;b.append(t)}b.onclick=c.fn;w.append(b)});
+ (btns||[]).forEach(o=>{const b=document.createElement('button');b.className='btn'+(o.primary?' primary':'');b.textContent=o.label;if(o.sub){const s=document.createElement('small');s.textContent=o.sub;b.append(s)}b.onclick=o.fn;w.append(b)});
+ d.append(w)}
+function choose(prompt,list,fn,tagf,extra){setDock(prompt,extra||[],list.map(i=>({i,tag:tagf?tagf(i):'',fn:()=>fn(i)})))}
+
+function openProfile(i){const v=V[i];const c=$('#sheetCard');c.innerHTML='';const h=document.createElement('div');h.className='head';h.append(avatar(i));
+ const t=document.createElement('div');t.innerHTML=`<h3>${v.name}</h3><div class="meta">${v.job} · ${v.age}세 · ${v.pers}</div>`;h.append(t);
+ const st=document.createElement('p');st.textContent=v.story;const tie=document.createElement('div');tie.className='meta';tie.textContent=v.tie;
+ const ab=document.createElement('div');ab.className='ab';ab.innerHTML=`<b>능력</b> ${ABILITY[v.role||'none']}<br><b>남기는 흔적</b> ${TRACE[i].item}`;c.append(h,st,tie,ab);
+ if(G&&G.started){const s=document.createElement('div');s.className='meta';s.textContent=G.alive[i]?(i===G.player?'이번 판의 나.':'살아 있다.'):`${G.death[i]}`;c.append(s)}
+ const x=document.createElement('button');x.className='btn';x.textContent='닫기';x.onclick=closeSheet;c.append(x);$('#sheet').hidden=false;x.focus()}
+function openNotes(tab){tab=tab||'notes';const c=$('#sheetCard');c.innerHTML='<h3>수첩</h3>';
+ const tabs=document.createElement('div');tabs.className='tabs';tabs.setAttribute('role','tablist');
+ [['notes','기록'],['clues','단서'],['inter','탐문']].forEach(([k,l])=>{const b=document.createElement('button');b.className='tab';b.setAttribute('role','tab');b.setAttribute('aria-selected',k===tab);
+  b.textContent=l+(k==='clues'?` ${G.clues.length}`:k==='inter'?` ${G.inter.length}`:'');b.onclick=()=>openNotes(k);tabs.append(b)});c.append(tabs);
+ const ul=document.createElement('ul');ul.className='notes';const li=(t,cls)=>{const e=document.createElement('li');if(cls)e.className=cls;e.textContent=t;ul.append(e);return e};
+ if(tab==='notes'){const ab=document.createElement('div');ab.className='ab';ab.innerHTML=`<b>${nm(G.player)} · ${V[G.player].job}</b> ${ABILITY[V[G.player].role||'none']}`;c.append(ab);
+  if(!G.notes.length)li('아직 적어 둔 것이 없다.');G.notes.forEach(n=>li(`${n.d}일차 — ${n.t}`))}
+ else if(tab==='clues'){const cnt={};G.clues.forEach(k=>cnt[k.o]=(cnt[k.o]||0)+1);
+  const help=document.createElement('div');help.className='meta';help.textContent='살인 현장에서 나온 물건이다. 마피아가 흘린 진짜 흔적과, 누군가 심어 둔 가짜 흔적이 섞여 있다. 여러 번 나온 흔적을 눈여겨보자.';c.append(help);
+  const keys=Object.keys(cnt).sort((a,b)=>cnt[b]-cnt[a]);if(keys.length){const t=document.createElement('div');t.className='tally';keys.forEach(o=>{const s=document.createElement('span');s.textContent=`${TRACE[o].item} · ${sh(+o)} ${cnt[o]}회`;t.append(s)});c.append(t)}
+  if(!G.clues.length)li('아직 발견된 흔적이 없다.');
+  let d0=0;G.clues.forEach(k=>{if(k.d!==d0){d0=k.d;li(`${k.d}일차 · ${k.saved?'습격 현장(미수)':nm(k.v)+'의 집 앞'}`,'day')}li(`${TRACE[k.o].item} — ${V[k.o].job} ${nm(k.o)}의 흔적${G.alive[k.o]?'':' (사망)'}`)})}
+ else{const help=document.createElement('div');help.className='meta';help.textContent='낮마다 두 번 주민을 찾아가 물어볼 수 있다. 알리바이는 상대에게도 물어 맞춰 보자. 말이 어긋나는 사람이 있다.';c.append(help);
+  if(!G.inter.length)li('아직 아무에게도 묻지 않았다. 낮에 "탐문하기"로 주민을 찾아가 보자.');
+  let d0=0;G.inter.forEach(e=>{if(e.d!==d0){d0=e.d;li(`${e.d}일차 밤에 대해`,'day')}const x=li('');const q=document.createElement('div');q.className='q';q.textContent=`${nm(e.x)}에게 — ${QS[e.q]}`;const a=document.createElement('div');a.textContent=e.a;x.append(q,a)})}
+ const x=document.createElement('button');x.className='btn';x.textContent='닫기';x.onclick=closeSheet;c.append(ul,x);$('#sheet').hidden=false;const sel=tabs.querySelector('[aria-selected="true"]');if(sel)sel.focus()}
+function closeSheet(){$('#sheet').hidden=true}
+$('#sheet').addEventListener('click',e=>{if(e.target.id==='sheet')closeSheet()});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeSheet()});
+const note=t=>G.notes.push({d:G.day,t});
+
+// ---------- claims ----------
+const MAG={pol_m:45,pol_c:-25,rep_m:55,rep_c:-30,w_out:10,w_stay:-6,acc:9,vouch:-7};
+const HARD=['pol_m','pol_c','rep_m','rep_c'];
+function claim(s,t,type){let m=MAG[type];if(type==='acc'){const n=G.claims.filter(c=>c.s===s&&c.t===t&&c.type==='acc').length;m*=Math.pow(.55,n)}if(type==='w_out'&&(V[t].role==='police'||V[t].role==='doctor'))m=4;
+ for(const i of npcs()){if(i===s)continue;
+  if(i===t){if(m>0)bump(i,s,15);continue}
+  const d=m*(.4+.6*V[i].p.cred)*trust(i,s)*(s===G.player?1.8:1);bump(i,t,d)}
+ if(HARD.includes(type)){const pos=type.endsWith('_m');for(const i of npcs())bump(i,s,-6*V[i].p.logic);
+  for(const c of G.claims){if(c.t===t&&c.s!==s&&HARD.includes(c.type)&&c.type.endsWith('_m')!==pos){
+   for(const i of npcs()){bump(i,s,18*V[i].p.logic);bump(i,c.s,18*V[i].p.logic)}G.contra=true;G.contraPair=[c.s,s]}}}
+ G.claims.push({s,t,type,d:G.day});syncKnown()}
+
+// ---------- NPC choices ----------
+const topSus=(i,noise=15,pool)=>argmax((pool||alive()).filter(j=>j!==i),j=>G.sus[i][j]+R(0,noise));
+function npcProtect(D){if(Math.random()<.25)return D;const P=roleIdx('police');
+ if(G.alive[P]&&P!==D&&Math.random()<.45)return P;return argmax(alive().filter(j=>j!==D),j=>-G.sus[D][j]+R(0,25))}
+function mafiaTarget(){const M=G.mafia;const c=alive().filter(j=>j!==M);
+ const w=c.map(j=>{let x=1;const r=V[j].role;if(r==='police')x*=1.8;if(r==='watch')x*=2;if(r==='reporter'&&!G.repUsed)x*=1.4;if(r==='doctor')x*=1.3;
+  if(G.ms==='hide'&&(r==='police'||r==='watch'))x*=1.4;if(j!==G.player)x+=G.sus[j][M]/(G.ms==='aggr'?12:18);else x*=.55;return x});return wpick(c,w)}
+function npcVote(i){const c=alive().filter(j=>j!==i);
+ if(i===G.mafia)return argmax(c,j=>groupSus(j)+R(0,12));const p=V[i].p;
+ return argmax(c,j=>G.sus[i][j]*(1-p.band*.5)+groupSus(j)*p.band*.7+R(0,8+p.vol*15))}
+
+
+// ---------- clues, alibis, interrogation, mafia styles ----------
+const STYLE=['yo','yo','hao','yo','ban','yo','yo','ban','yo','yo'];
+const TRACE=[
+ {item:'젖은 담배꽁초',def:'담배꽁초요? 주재소 앞 재떨이에서 아무나 주워 갈 수 있습니다.'},
+ {item:'소독약 냄새가 밴 거즈',def:'거즈는 진료소에서 마을 사람 다 받아 갔어요.'},
+ {item:'등잔 기름 자국',def:'등잔 기름은 집집마다 다 쓰오.'},
+ {item:'잉크 얼룩',def:'잉크요? 신문 받아 본 사람 손엔 다 묻어요.'},
+ {item:'쇳가루',def:'쇳가루? 내가 만든 연장 쓰는 집이면 다 떨어져 있어!'},
+ {item:'밀가루',def:'밀가루요? 제 빵 사 간 집 앞은 다 밀가루투성이예요.'},
+ {item:'분필 가루',def:'분필은 분교 아이들도 들고 다녀요. 저만 쓰는 게 아니에요.'},
+ {item:'사과나무 잎',def:'사과 잎이야 바람 불면 온 동네로 날아가!'},
+ {item:'막걸리 냄새가 밴 잔',def:'술잔이야 우리 집에서 안 마셔 본 사람이 어딨어요.'},
+ {item:'톱밥',def:'톱밥은… 제가 고친 집이면 어디든 남아 있어요.'}];
+const SEE=[.2,.3,.6,.3,.2,.5,.2,.35,.4,.2];
+const MSTYLE={0:'chaos',1:'hide',2:'hide',3:'aggr',4:'aggr',5:'chaos',6:'chaos',7:'aggr',8:'chaos',9:'hide'};
+const MSTYLE_TXT={aggr:'공격형. 남을 몰아붙이고, 현장에 흔적을 잘 흘리고, 알리바이를 지어내다 들킨다.',hide:'잠복형. 말을 아끼고, 흔적을 잘 지우고, 알리바이는 "혼자 잤다"로 버틴다.',chaos:'교란형. 남의 흔적을 현장에 심고, 사람을 감싸며 신뢰를 산다.'};
+const S=(i,o)=>o[STYLE[i]]||o.yo;
+function nameIn(i,t){if(t===G.player&&i!==G.player)return'당신';const c=callName(i,t);if(c)return c;return STYLE[i]==='yo'?sh(t)+' 씨':sh(t)}
+const QS={where:'어젯밤 어디 있었어요?',seen:'밤에 본 게 있어요?',sus:'누가 제일 수상해요?'};
+
+function nightFacts(o){const M=G.mafia,me=G.player;const mv=new Set([M]);
+ if(o.prot!=null&&o.prot!==o.D)mv.add(o.D);if(o.inv!=null)mv.add(o.P);if(o.repT!=null)mv.add(o.Rp);if(o.wOn)mv.add(o.W);
+ const cand=shuffle(alive().filter(j=>!mv.has(j)&&j!==o.victim));const pairs=[];const np=Math.random()<.5?1:2;
+ for(let k=0;k+1<cand.length&&pairs.length<np;k+=2)pairs.push([cand[k],cand[k+1]]);
+ const movers=[...mv];const seen={};
+ for(const i of alive()){if(i===M||i===o.victim)continue;if(mv.has(i)&&!(i===o.W&&o.wOn))continue;const pool=movers.filter(x=>x!==i);
+  if(pool.length&&Math.random()<(i===me?.3:SEE[i]))seen[i]=pick(pool)}
+ G.nights[G.day]={movers,pairs,seen,cache:{}};
+ for(const[a,b]of pairs){bump(a,b,-8);bump(b,a,-8)}
+ for(const i in seen){const x=seen[i];if(!['police','doctor','watch'].includes(V[x].role))bump(+i,x,1)}
+ if(!G.dead){const pr=pairs.find(p=>p.includes(me));if(pr){const q=pr[0]===me?pr[1]:pr[0];o.priv.push(`어젯밤 나는 ${jo(nm(q),'과')} 함께 있었다. 적어도 ${jo(nm(q),'은')} 밤에 밖으로 나가지 않았다.`);note(`알리바이: 밤새 ${jo(nm(q),'과')} 함께 있었다.`)}
+  if(seen[me]!=null){o.priv.push(`자정쯤 창밖으로 ${jo(nm(seen[me]),'이')} 골목을 지나가는 걸 봤다.`);note(`목격: 자정쯤 ${jo(nm(seen[me]),'이')} 골목을 지나갔다.`)}}
+ sceneClues(o.victim,o.saved)}
+
+function sceneClues(v,saved){const M=G.mafia;let pT={aggr:.55,hide:.35,chaos:.45}[G.ms];if(saved)pT*=.7;const items=[];
+ if(Math.random()<pT)items.push(M);
+ if(Math.random()<(items.length?.6:.85)){const pool=alive().filter(j=>j!==M&&j!==v);const d=G.ms==='chaos'&&Math.random()<.6?argmax(pool,j=>groupSus(j)+R(0,10)):pick(pool);if(d!=null)items.push(d)}
+ G.today=shuffle(items);G.today.forEach(o=>G.clues.push({d:G.day,v,saved,o}));
+ for(const o of G.today){const n=G.clues.filter(c=>c.o===o).length;for(const i of npcs())if(i!==o)bump(i,o,(n-1)*1.5*V[i].p.logic)}}
+
+function roleExcuse(x){return{police:'조사 때문에 밤에 나가 있었습니다. 결과는 아침에 말씀드린 대로입니다.',doctor:'누굴 지키러 나가 있었어요. 누군지는 말할 수 없어요.',watch:'늘 그렇듯 등불 들고 골목을 돌았소.',reporter:'취재하러 나가 있었어요. 기사로 보시게 될 거예요.'}[V[x].role]}
+const alone=x=>S(x,{yo:'집에서 혼자 잤어요.',ban:'집에서 혼자 잤지.',hao:'집에서 혼자 잤소.'});
+const withP=(x,p)=>{const n=jo(nameIn(x,p),'과');return S(x,{yo:`어젯밤엔 ${n} 같이 있었어요. 물어보셔도 돼요.`,ban:`어젯밤엔 ${n} 같이 있었어. 물어봐.`,hao:`어젯밤엔 ${n} 함께 있었소.`})};
+const sawA=(x,t)=>{const n=jo(nameIn(x,t),'이');return S(x,{yo:`자정쯤 ${n} 골목을 지나가는 걸 봤어요.`,ban:`자정쯤 ${n} 골목 지나가는 거 봤어.`,hao:`자정 무렵 ${n} 골목을 지나가는 걸 봤소.`})};
+const nothing=x=>S(x,{yo:'아무것도 못 봤어요. 일찍 잤거든요.',ban:'아무것도 못 봤어.',hao:'본 게 없소.'});
+function answer(x,q){const N=G.nights[G.day],M=G.mafia;if(!N)return S(x,{yo:'아직은 할 말이 없어요.',ban:'아직은 할 말 없어.',hao:'아직은 할 말이 없소.'});
+ const key=x+'|'+q;if(N.cache[key])return N.cache[key];let a;
+ if(q==='where'){
+  if(x===M){if(['police','doctor','watch'].includes(V[x].role))a=roleExcuse(x);
+   else if(G.ms==='hide'||(G.ms==='chaos'&&Math.random()<.4))a=alone(x);
+   else{const p=pick(alive().filter(j=>j!==x));(N.fake=N.fake||{})[x]=p;a=withP(x,p)}}
+  else if(N.movers.includes(x))a=roleExcuse(x);
+  else{const pr=N.pairs.find(p=>p.includes(x));a=pr?withP(x,pr[0]===x?pr[1]:pr[0]):alone(x)}}
+ else if(q==='seen'){
+  if(x===M){const pool=alive().filter(j=>j!==x&&j!==G.player);
+   a=G.ms==='hide'||!pool.length?nothing(x):sawA(x,G.ms==='aggr'?argmax(pool,j=>groupSus(j)):pick(pool))}
+  else if(x===7&&Math.random()<.5){const r=pick(alive().filter(j=>j!==x));a=`내가 직접 본 건 아닌데, ${jo(nameIn(x,r),'이')} 밤에 돌아다녔다는 소문이 있어.`}
+  else a=N.seen[x]!=null?sawA(x,N.seen[x]):nothing(x)}
+ else{let t;const pool=alive().filter(j=>j!==x);
+  if(x===M){const byG=pool.slice().sort((a,b)=>groupSus(b)-groupSus(a));t=G.ms==='aggr'?byG[0]:G.ms==='hide'?(byG[1]??byG[0]):pick(pool)}else t=topSus(x,5);
+  const n=G.clues.filter(c=>c.o===t).length;
+  const why=n?S(x,{yo:`현장에서 ${jo(TRACE[t].item,'이')} 나왔잖아요.`,ban:`현장에 ${jo(TRACE[t].item,'이')} 나왔잖아.`,hao:`현장에서 ${jo(TRACE[t].item,'이')} 나왔소.`})
+   :N.seen[x]===t?S(x,{yo:'밤에 돌아다니는 걸 봤으니까요.',ban:'밤에 돌아다니는 거 봤으니까.',hao:'밤에 돌아다니는 걸 봤으니.'})
+   :S(x,{yo:pick(['그냥 느낌이에요.','말하는 게 영 이상해서요.']),ban:'그냥 느낌이야.',hao:'그냥 그런 느낌이오.'});
+  a=t===G.player?S(x,{yo:'솔직히… 당신이요.',ban:'솔직히 너야.',hao:'솔직히 말하면 당신이오.'})+' '+why
+   :S(x,{yo:`저는 ${jo(nameIn(x,t),'이')} 제일 수상해요.`,ban:`난 ${jo(nameIn(x,t),'이')} 제일 수상해.`,hao:`내 보기엔 ${jo(nameIn(x,t),'이')} 제일 수상하오.`})+' '+why}
+ N.cache[key]=a;return a}
+
+function interMenu(){const me=G.player;choose('누구를 찾아가 물어볼까요?',alive().filter(i=>i!==me),x=>qMenu(x),i=>G.inter.some(e=>e.d===G.day&&e.x===i)?'물어봄':'',[{label:'취소',fn:talkMenu}])}
+function qMenu(x){const me=G.player;const B=Object.keys(QS).map(q=>({label:QS[q],sub:G.inter.some(e=>e.d===G.day&&e.x===x&&e.q===q)?'이미 물어봄':'',fn:()=>ask(x,q)}));B.push({label:'취소',fn:interMenu});setDock(`${addr(me,x)}에게 무엇을 물어볼까요?`,B)}
+async function ask(x,q){const me=G.player;const a=answer(x,q);G.interLeft--;G.inter.push({d:G.day,x,q,a});
+ await show([{k:'say',who:me,tag:'탐문',text:`${addr(me,x)}, ${QS[q]}`},{k:'say',who:x,tag:'탐문',text:a}]);talkMenu()}
+
+function contextLines(E){const out=[];const v=G.lastVictim;const logicNpc=ex=>argmax(npcs().filter(i=>!ex.includes(i)),i=>V[i].p.logic+R(0,.2));
+ for(const o of G.today||[]){if(!G.alive[o])continue;const n=G.clues.filter(c=>c.o===o).length;
+  if(o!==G.player)out.push({who:o,text:TRACE[o].def});
+  if(n>=2){const i=logicNpc([o]);if(i!=null)out.push({who:i,text:S(i,{yo:`${TRACE[o].item}, 벌써 ${n}번째예요. 우연이 이렇게 겹칠까요?`,ban:`${TRACE[o].item}, 벌써 ${n}번째야. 이게 우연이야?`,hao:`${TRACE[o].item}, 벌써 ${n}번째요. 우연은 아니오.`}),fx:()=>{for(const k of npcs())bump(k,o,1*V[k].p.logic)}})}}
+ for(const g of G.grudge.filter(g=>g.d===G.day-1&&G.alive[g.f]&&g.f!==G.player)){const vs=(G.lastExec?.yes||[]).filter(y=>y!==g.f&&G.alive[y]);if(!vs.length)continue;const y=argmax(vs,j=>G.sus[g.f][j]);const f=g.f,xn=jo(nameIn(f,g.x),'을'),yn=nameIn(f,y);
+  out.push({who:f,text:S(f,{yo:`${xn} 죽인 건 어제 찬성한 사람들이에요. ${yn}, 저는 안 잊어요.`,ban:`${xn} 죽인 건 찬성한 너희야. ${yn}, 잊지 않을 거다.`,hao:`${xn} 보낸 건 찬성한 사람들이오. ${yn}, 기억하겠소.`}),fx:()=>claim(f,y,'acc')})}
+ if(G.lastExec&&G.lastExec.d===G.day-1&&!G.grudge.some(g=>g.d===G.day-1)){const L=G.lastExec;const vs=L.yes.filter(j=>G.alive[j]);const i=logicNpc(vs.slice(0,0));
+  if(i!=null&&vs.length){const y=argmax(vs.filter(j=>j!==i),j=>groupSus(j));if(y!=null){const xn=nameIn(i,L.x),yn=nameIn(i,y);
+   out.push({who:i,text:S(i,{yo:`어제 처형한 ${xn}, 시민이었어요. 그때 찬성한 ${yn}, 할 말 없어요?`,ban:`어제 죽인 ${jo(xn,'은')} 시민이었어. 찬성한 ${yn}, 할 말 없어?`,hao:`어제 보낸 ${jo(xn,'은')} 시민이었소. 찬성한 ${yn}, 할 말 없소?`}),fx:()=>{for(const k of npcs())bump(k,y,2)}})}}}
+ for(const s of (G.vAcc||[]).filter(s=>G.alive[s]&&s!==G.player).slice(0,1)){const i=logicNpc([s]);if(i==null)continue;const vn=jo(nameIn(i,v),'을'),sn=nameIn(i,s);
+  out.push({who:i,text:S(i,{yo:`${vn} 의심하던 ${sn}, 이제 뭐라고 할 거예요?`,ban:`${vn} 의심하던 ${sn}, 이제 뭐라고 할래?`,hao:`${vn} 의심하던 ${sn}, 이제 뭐라 하겠소?`})},{who:s,text:line(s,'defend')})}
+ if(G.contraPair){const[a,b]=G.contraPair;G.contraPair=null;const i=logicNpc([a,b]);if(i!=null&&G.alive[a]&&G.alive[b])out.push({who:i,text:S(i,{yo:`${jo(nameIn(i,a),'과')} ${nameIn(i,b)} 말이 정면으로 엇갈려요. 둘 중 하나는 거짓말이에요.`,ban:`${jo(nameIn(i,a),'과')} ${nameIn(i,b)} 말이 완전히 달라. 하나는 거짓말이야.`,hao:`${jo(nameIn(i,a),'과')} ${nameIn(i,b)} 말이 엇갈리오. 하나는 거짓이오.`})})}
+ if(G.noExec&&v!=null){const i=argmax(npcs().filter(k=>!G.used.has('noexec|'+k)),k=>V[k].p.band+R(0,.2));if(i!=null){G.used.add('noexec|'+i);out.push({who:i,text:S(i,{yo:'어제 아무것도 못 정한 대가가 이거예요.',ban:'어제 아무도 못 정한 대가가 이거야.',hao:'어제 정하지 못한 값을 치른 거요.'})})}}
+ const taken=out.slice(0,4);for(const c of taken){E.push({k:'say',who:c.who,text:c.text});if(c.fx)c.fx()}return taken.length}
+// ---------- flow ----------
+function startGame(){const player=Math.floor(Math.random()*10);let mafia;do{mafia=Math.floor(Math.random()*10)}while(mafia===player);
+ const sus=V.map((_,i)=>V.map((_,j)=>i===j?0:clamp(Math.random()*22*(.5+V[i].p.vol)+(1-REL[i][j])*25+0,0,60)));
+ G={day:1,player,mafia,alive:Array(10).fill(true),death:Array(10).fill(''),sus,claims:[],notes:[],polKnown:{},pInv:{},fakePol:{},repUsed:false,pend:{},used:new Set(),watched:new Set(),lastVictim:null,rel:REL.map(r=>r.slice()),nights:{},clues:[],inter:[],interLeft:2,grudge:[],lastExec:null,noExec:false,ms:MSTYLE[mafia],today:[],started:true,over:false,phase:'night'};
+ $('#intro').hidden=true;$('#game').hidden=false;$('#feed').innerHTML='';setPhase('night');renderBoard();window.scrollTo(0,0);
+ const r=V[player].role;note(`나는 ${nm(player)}(${V[player].job}). ${ABILITY[r||'none']}`);
+ show([{k:'sys',text:'어젯밤 마을 어귀 우물가에서 핏자국이 발견됐다. 버드내의 열 사람 가운데 하나가 살인자다.'},
+  {k:'priv',text:`이번 판 나는 ${nm(player)}, ${V[player].job}이다. ${ABILITY[r||'none']}`}]).then(goNight)}
+
+function step(label,fn){if(G.auto)return setTimeout(fn,0);const B=[{label,primary:true,fn}];if(G.dead)B.push({label:'결말까지 건너뛰기',fn:()=>{G.auto=true;fn()}});setDock(G.dead?'관전 중이다.':'',B)}
+function spectateChoice(next){setDock('나는 죽었다. 이번 판은 패배로 기록된다. 남은 이야기를 지켜볼까?',[
+ {label:'모른 채 지켜본다',sub:'마피아는 끝까지 비밀',primary:true,fn:()=>{G.spectate=true;add({k:'sys',text:'나는 죽었지만, 마을의 끝을 지켜보기로 했다.'});next()}},
+ {label:'마피아를 알고 지켜본다',sub:'정체와 밤의 움직임이 보인다',fn:()=>{G.spectate=true;G.reveal=true;renderBoard();add({k:'priv',text:`마피아는 ${nm(G.mafia)}(${V[G.mafia].job})다. 이제 마을이 이 사람을 찾아낼 수 있을지 지켜본다.`});next()}},
+ {label:'결말만 본다',fn:()=>{G.spectate=true;G.auto=true;next()}}])}
+async function goNight(){setPhase('night');renderBoard();
+ await show([{k:'phase',text:`${G.day}일차 밤`},{k:'sys',text:'마을에 등불이 하나둘 꺼진다.'}]);
+ if(G.dead)return step('밤을 지켜본다',()=>resolveNight({}));
+ const me=G.player,r=V[me].role,others=alive().filter(i=>i!==me);
+ if(r==='doctor')choose('오늘 밤 지킬 사람을 고르세요. 나 자신도 고를 수 있어요.',alive(),t=>resolveNight({t}));
+ else if(r==='police')choose('조사할 사람을 고르세요.',others,t=>resolveNight({t}),i=>G.pInv[i]===undefined?'':G.pInv[i]?'마피아':'시민');
+ else if(r==='watch')choose('오늘 밤 지켜볼 집을 고르세요.',others,t=>resolveNight({t}));
+ else if(r==='reporter'&&!G.repUsed)choose('특종을 노릴 사람을 고르세요. 취재는 한 판에 한 번뿐이에요.',others,t=>resolveNight({t}),null,[{label:'이번 밤은 쉰다',fn:()=>resolveNight({})}]);
+ else setDock('문을 걸어 잠그고 밤이 지나가길 기다린다.',[{label:'밤을 보낸다',primary:true,fn:()=>resolveNight({})}])}
+
+async function resolveNight(c){const me=G.player,M=G.mafia;const P=roleIdx('police'),D=roleIdx('doctor'),W=roleIdx('watch'),Rp=roleIdx('reporter');
+ let prot=null,inv=null,watchT=null,repT=null;const priv=[];G.pend={};
+ if(G.alive[D]&&D!==M)prot=D===me?c.t:npcProtect(D);
+ if(G.alive[P]&&P!==M){inv=P===me?c.t:topSus(P,20,alive().filter(j=>G.polKnown[j]===undefined));
+  if(inv!=null){const isM=inv===M;if(P===me){G.pInv[inv]=isM;note(`밤 조사: ${nm(inv)} → ${isM?'마피아다!':'마피아가 아니다.'}`);priv.push(`조사 결과, ${jo(nm(inv),'은')} ${isM?'마피아다.':'마피아가 아니다.'}`)}
+   else{G.polKnown[inv]=isM;G.pend.pol={t:inv,m:isM}}}}
+ if(G.alive[Rp]&&!G.repUsed){
+  if(Rp===M){if(G.day>=2&&Math.random()<.4){G.repUsed=true;const t=argmax(alive().filter(j=>j!==M),j=>groupSus(j)+R(0,20));G.pend.rep={s:Rp,t,m:Math.random()<.35}}}
+  else if(Rp===me){if(c.t!=null){G.repUsed=true;repT=c.t;G.pend.rep={s:me,t:repT,m:repT===M};note(`특종 취재: ${nm(repT)} → ${repT===M?'마피아':'마피아 아님'} (아침 호외로 공개)`)}}
+  else if(G.day>=2&&Math.random()<.5){G.repUsed=true;repT=topSus(Rp);G.pend.rep={s:Rp,t:repT,m:repT===M}}}
+ if(G.alive[W]&&W!==M){if(W===me)watchT=c.t;else{const fresh=alive().filter(j=>!G.watched.has(j)&&V[j].role!=='police'&&V[j].role!=='doctor');watchT=topSus(W,30,fresh.length>1?fresh:null)}G.watched.add(watchT);
+  const out=watchT===M||(watchT===D&&prot!=null&&prot!==D)||(watchT===P&&inv!=null)||(watchT===Rp&&repT!=null);
+  if(W===me){note(`밤 감시: ${nm(watchT)} → ${out?'밤에 집을 나갔다':'집에 있었다'}`);priv.push(`${jo(nm(watchT),'은')} ${out?'자정 넘어 집을 나갔다.':'밤새 집 밖으로 나오지 않았다.'}`)}
+  else{G.pend.w={t:watchT,out};bump(W,watchT,out?20:-8)}}
+ const wOn=G.alive[W]&&W!==M&&watchT!=null;const victim=mafiaTarget();const saved=victim===prot;
+ if(G.dead&&G.reveal){priv.push(`마피아 ${jo(nm(M),'이')} ${jo(nm(victim),'을')} 노렸다.${saved?' 그러나 의사가 그 집을 지키고 있었다.':''}`)}
+ G.lastVictim=saved?null:victim;if(!saved){G.alive[victim]=false;G.death[victim]=`${G.day}일차 밤에 살해됨`}
+ nightFacts({prot,inv,repT,victim,saved,D,P,Rp,W,wOn,priv});
+ if(D===me&&prot!=null)note(`밤 보호: ${nm(prot)}${saved?' — 습격을 막아 냈다!':''}`);
+ await morning(victim,saved,priv)}
+
+async function morning(victim,saved,priv){const me=G.player,M=G.mafia;const P=roleIdx('police'),W=roleIdx('watch');
+ setPhase('day');const E=[{k:'phase',text:`${G.day}일차 아침`}];
+ priv.forEach(t=>E.push({k:'priv',text:t}));
+ if(saved){E.push({k:'good',text:'한밤중 비명이 들렸지만, 습격당한 사람은 의사의 손에 목숨을 건졌다.'});
+  if(V[me].role==='doctor')E.push({k:'priv',text:`내가 지킨 ${jo(nm(victim),'이')} 습격당했다. 내가 살렸다.`});
+  else if(victim===me)E.push({k:'priv',text:'어젯밤 습격당한 사람은 나였다. 누군가 나를 지켜 줬다.'})}
+ else{E.push({k:'death',text:`${nm(victim)}(${V[victim].job})${hasB(nm(victim))?'이':'가'} 집 앞에서 싸늘하게 식은 채 발견됐다.`});
+  if(victim===me){G.dead=true;G.deathWhy='밤사이 마피아에게 습격당했다.';addStat(false)}
+  if(alive().length<=2){await show(E);return winCheck(E)}
+  const y=argmax(alive(),j=>G.sus[victim][j]);
+  if(victim===me)E.push({k:'priv',text:'그 사람은 나였다. 나는 이번 밤을 넘기지 못했다.'});
+  G.vAcc=[...new Set(G.claims.filter(c=>c.t===victim&&['acc','pol_m','rep_m'].includes(c.type)&&c.d>=G.day-1).map(c=>c.s))];for(const s2 of G.vAcc)for(const i of npcs()){bump(i,s2,3*V[i].p.logic);G.rel[i][s2]*=.9}
+  if(victim!==me&&y!=null&&G.sus[victim][y]>45){E.push({k:'sys',text:`${jo(nm(victim),'이')} 죽기 전 ${jo(nm(y),'을')} 의심하고 있었다는 말이 돈다.`});for(const i of npcs())bump(i,y,8*V[i].p.logic)}}
+ if(G.today.length)G.today.forEach(o=>E.push({k:'clue',text:`${saved?'습격 현장':nm(victim)+'의 집 앞'}에서 ${jo(TRACE[o].item,'이')} 발견됐다.`}));else E.push({k:'clue',text:'현장에는 아무 흔적도 남지 않았다.'});
+ G.interLeft=2;if(saved)G.vAcc=[];
+ // police
+ if(G.alive[P]){
+  if(P===M){const c=alive().filter(j=>j!==M&&G.fakePol[j]===undefined);if(c.length){let t,m;
+    if(G.day>=2&&(groupSus(M)>28||Math.random()<.5)){t=argmax(c,j=>(j===me?30:G.sus[j][M])+groupSus(j)*.6+R(0,15));m=true}else{t=pick(c);m=false}
+    G.fakePol[t]=m;E.push({k:'say',who:P,text:`어젯밤 ${sh(t)} 씨를 조사했습니다. ${m?'마피아입니다. 틀림없습니다.':'마피아가 아닙니다.'}`});claim(P,t,m?'pol_m':'pol_c')}}
+  else if(G.pend.pol&&P!==me&&!G.alive[G.pend.pol.t]){E.push({k:'say',who:P,text:`어젯밤 ${sh(G.pend.pol.t)} 씨를 조사하러 갔을 땐, 이미 늦었습니다.`})}
+  else if(G.pend.pol&&P!==me){const{t,m}=G.pend.pol;E.push({k:'say',who:P,text:`어젯밤 ${sh(t)} 씨를 조사했습니다. ${m?'마피아입니다. 틀림없습니다.':'마피아가 아닙니다.'}`});claim(P,t,m?'pol_m':'pol_c')}}
+ // watchman
+ if(G.alive[W]&&W!==me){let w=null;
+  if(W===M){const c=alive().filter(j=>j!==M);w={t:pick(c),out:Math.random()<.55}}else if(G.pend.w)w=G.pend.w;
+  if(w&&!G.alive[w.t])E.push({k:'say',who:W,text:`어젯밤엔 ${sh(w.t)}네 집 앞을 지켰소. 비명을 듣고 달려갔지만, 어둠 속이라 얼굴은 못 봤소.`});
+  else if(w){E.push({k:'say',who:W,text:`어젯밤엔 ${sh(w.t)}네 집 앞을 지켰소. ${w.out?'자정 넘어 문이 열리더군. 밖으로 나갔소.':'밤새 불 한 번 안 켜졌소.'}`});claim(W,w.t,w.out?'w_out':'w_stay')}}
+ // reporter
+ if(G.pend.rep&&G.alive[G.pend.rep.s]&&!G.alive[G.pend.rep.t]){const{s,t}=G.pend.rep;if(s===G.mafia){const c=alive().filter(j=>j!==s);G.pend.rep.t=argmax(c,j=>groupSus(j)+R(0,20))}else{E.push({k:'news',text:`기자 ${jo(nm(s),'이')} 취재하던 ${jo(nm(t),'이')} 숨졌다. 기사는 실리지 못했다.`});G.pend.rep=null}}
+ if(G.pend.rep&&G.alive[G.pend.rep.s]){const{s,t,m}=G.pend.rep;E.push({k:'news',text:`기자 ${nm(s)} 단독 취재 — ${jo(nm(t),'은')} ${m?'마피아다.':'마피아가 아니다.'}`});claim(s,t,m?'rep_m':'rep_c')}
+ if(G.contra){G.contra=false;E.push({k:'sys',text:'발표된 정보가 서로 엇갈린다. 둘 중 하나는 거짓말을 하고 있다.'})}
+ await show(E);if(G.over)return;if(G.dead&&!G.spectate)return spectateChoice(discussion);if(G.dead)return step('토론을 지켜본다',discussion);setDock('',[{label:'토론을 시작한다',primary:true,fn:discussion}])}
+
+function winCheck(E){if(alive().length<=2){end(false,'마을에 두 사람만 남았다. 이제 마피아를 막을 사람이 없다.');return false}return true}
+
+function friend(s,t,E){if(t===G.player)return;const f=npcs().find(f=>f!==s&&f!==t&&(G.rel[f][t]>=.8||(G.nights[G.day]&&G.nights[G.day].pairs.some(p=>p.includes(f)&&p.includes(t))))&&G.sus[f][t]<35&&!G.used.has(G.day+'|v|'+f));if(f==null||Math.random()<.3)return;G.used.add(G.day+'|v|'+f);E.push({k:'say',who:f,text:line(f,'vouch',t)});claim(f,t,'vouch')}
+async function discussion(){const E=[];const top=argmax(alive(),j=>groupSus(j));
+ let sp=shuffle(npcs()).filter(i=>Math.random()<V[i].p.talk).slice(0,5);if(!sp.length)sp=[pick(npcs())];
+ const v=G.lastVictim;if(v!=null){const mo=argmax(npcs().filter(i=>i!==G.lastMourner),i=>G.rel[i][v]+R(0,.3));G.lastMourner=mo;E.push({k:'say',who:mo,text:line(mo,'mourn',v,'v')});sp=sp.filter(i=>i!==mo).slice(0,4)}
+ const nCtx=contextLines(E);if(nCtx)sp=sp.slice(0,Math.max(2,4-nCtx));
+ for(const i of sp){const L=V[i].L;
+  if(i===G.mafia){if(top===i&&groupSus(i)>30)E.push({k:'say',who:i,text:line(i,'defend')});
+   else if(Math.random()<{aggr:.65,hide:.9,chaos:.65}[G.ms])E.push({k:'say',who:i,text:line(i,'idle')});
+   else if(G.ms==='chaos'&&Math.random()<.5){const t=pick(alive().filter(j=>j!==i&&j!==top));if(t!=null){E.push({k:'say',who:i,text:line(i,'vouch',t)});claim(i,t,'vouch')}}
+   else{const t=Math.random()<.7&&top!==i?top:pick(alive().filter(j=>j!==i));E.push({k:'say',who:i,text:line(i,'accuse',t)});claim(i,t,'acc');friend(i,t,E)}continue}
+  const t=topSus(i,10);
+  if(top===i&&groupSus(i)>35){E.push({k:'say',who:i,text:line(i,'defend')});for(const k of npcs())if(k!==i)bump(k,i,-R(0,6)*V[k].p.cred)}
+  else if(t!=null&&G.sus[i][t]>40){E.push({k:'say',who:i,text:line(i,'accuse',t)});claim(i,t,'acc');friend(i,t,E)}
+  else E.push({k:'say',who:i,text:line(i,'idle')})}
+ await show(E);talkMenu()}
+
+function talkMenu(){if(G.dead)return step('투표를 지켜본다',()=>tally(null));const me=G.player,r=V[me].role,others=alive().filter(i=>i!==me);const B=[];
+ if(G.interLeft>0)B.push({label:'탐문하기',sub:`오늘 ${G.interLeft}번 남음`,primary:true,fn:interMenu});
+ B.push({label:'누군가를 의심한다',fn:()=>choose('누구를 의심한다고 말할까요?',others,t=>playerSay(t,'acc'),null,[{label:'취소',fn:talkMenu}])});
+ B.push({label:'누군가를 감싼다',fn:()=>choose('누구를 믿는다고 말할까요?',others,t=>playerSay(t,'vouch'),null,[{label:'취소',fn:talkMenu}])});
+ if(r==='police')B.push({label:'조사 결과를 발표한다',sub:'거짓말도 할 수 있다',fn:()=>choose('누구에 대해 발표할까요?',others,t=>verdict(t,'pol'),i=>G.pInv[i]===undefined?'':G.pInv[i]?'마피아':'시민',[{label:'취소',fn:talkMenu}])});
+ if(r==='watch')B.push({label:'목격한 것을 말한다',sub:'거짓말도 할 수 있다',fn:()=>choose('누구 집 이야기를 할까요?',others,t=>verdict(t,'w'),null,[{label:'취소',fn:talkMenu}])});
+ B.push({label:'조용히 듣는다',fn:()=>voteMenu()});
+ setDock('내 차례다. 무슨 말을 할까?',B)}
+function verdict(t,kind){const B=kind==='pol'?[{label:`${sh(t)} 씨는 마피아다`,fn:()=>playerSay(t,'pol_m')},{label:`${sh(t)} 씨는 마피아가 아니다`,fn:()=>playerSay(t,'pol_c')}]
+ :[{label:'밤에 집을 나갔다',fn:()=>playerSay(t,'w_out')},{label:'집에 있었다',fn:()=>playerSay(t,'w_stay')}];B.push({label:'취소',fn:talkMenu});setDock(`${sh(t)} 씨에 대해 뭐라고 할까요?`,B)}
+async function playerSay(t,type){const me=G.player;const T={
+ acc:pick([`${addr(me,t)}, 솔직히 제일 수상해요.`,`저는 ${addr(me,t)}에게 표를 던질 생각이에요.`]),
+ vouch:pick([`${jo(addr(me,t),'은')} 아니라고 봐요. 제가 보증할게요.`,`${jo(addr(me,t),'은')} 그냥 두죠. 다른 데를 봐야 해요.`]),
+ pol_m:`어젯밤 조사 결과를 밝힙니다. ${jo(addr(me,t),'은')} 마피아입니다.`,pol_c:`제가 조사해 봤어요. ${jo(addr(me,t),'은')} 마피아가 아닙니다.`,
+ w_out:`어젯밤 ${sh(t)}네 집을 지켜봤어요. 한밤중에 밖으로 나가더군요.`,w_stay:`어젯밤 ${sh(t)}네 집을 지켜봤는데, 밤새 집에 있었어요.`}[type];
+ const E=[{k:'say',who:me,text:T}];claim(me,t,type);
+ if(MAG[type]>0){E.push({k:'say',who:t,text:line(t,'defend')});
+  friend(me,t,E);const ally=argmax(npcs().filter(i=>i!==t),i=>G.sus[i][t]+R(0,10));if(ally!=null&&G.sus[ally][t]>45)E.push({k:'say',who:ally,text:line(ally,'accuse',t)})}
+ else{const doubter=argmax(npcs().filter(i=>i!==t),i=>G.sus[i][t]);if(doubter!=null&&G.sus[doubter][t]>55)E.push({k:'say',who:doubter,text:`글쎄요, 저는 아직 ${jo(addr(doubter,t),'을')} 못 믿겠어요.`})}
+ await show(E);voteMenu()}
+
+function voteMenu(){choose('누구에게 표를 던질까요?',alive().filter(i=>i!==G.player),t=>tally(t),null,[{label:'기권한다',fn:()=>tally(null)}])}
+async function tally(pv){const ballots=npcs().map(i=>[i,npcVote(i)]);if(pv!=null)ballots.push([G.player,pv]);
+ const cnt={};ballots.forEach(([v,t])=>{(cnt[t]=cnt[t]||[]).push(v)});
+ const rows=Object.keys(cnt).map(Number).sort((a,b)=>cnt[b].length-cnt[a].length);
+ const E=[{k:'vote',rows:rows.map(t=>({n:nm(t),c:cnt[t].length,v:cnt[t].map(v=>v===G.player?'나':sh(v)).join(', ')}))}];
+ const max=cnt[rows[0]].length,tops=rows.filter(t=>cnt[t].length===max);
+ if(tops.length>1){E.push({k:'sys',text:'표가 갈렸다. 오늘은 아무도 처형되지 않는다.'});G.noExec=true;G.lastExec=null;await show(E);return nextNight()}
+ const x=tops[0];E.push({k:'sys',text:`표가 ${addrFull(x)}에게 몰렸다. 처형대에 서기 전 최후 변론이 주어진다.`});await show(E);trial(x)}
+const addrFull=x=>x===G.player?'나':nm(x);
+async function trial(x){const me=G.player;
+ if(x===me){const B=[{label:'억울함을 호소한다',fn:()=>defend('plea')},
+  {label:'다른 사람을 지목한다',fn:()=>choose('누구를 진짜 마피아로 지목할까요?',alive().filter(i=>i!==me),t=>defend('point',t),null,[{label:'취소',fn:()=>trial(x)}])},
+  {label:'아무 말도 하지 않는다',fn:()=>defend('none')}];
+  return setDock('최후 변론이다. 무슨 말을 할까?',B)}
+ await show([{k:'say',who:x,text:line(x,'defend')}]);
+ for(const i of npcs())if(i!==x)bump(i,x,-R(0,10)*V[i].p.cred*trust(i,x));
+ if(G.dead)return step('판결을 지켜본다',()=>verdictVote(x,null));
+ setDock(`${jo(addr(me,x),'을')} 처형할까요?`,[{label:'처형 찬성',fn:()=>verdictVote(x,true)},{label:'처형 반대',fn:()=>verdictVote(x,false)}])}
+async function defend(kind,t){const me=G.player;const E=[];
+ if(kind==='plea'){E.push({k:'say',who:me,text:pick(['저는 아니에요. 제가 죽으면 진짜 범인만 웃어요.','한 번만 더 생각해 주세요. 저는 끝까지 마을 편이에요.'])});
+  for(const i of npcs())bump(i,me,-R(6,18)*(.4+.6*V[i].p.cred)*trust(i,me))}
+ else if(kind==='point'){E.push({k:'say',who:me,text:`제가 아니라 ${jo(addr(me,t),'이')}에요. 저를 죽이면 내일 아침 후회하실 거예요.`});
+  for(const i of npcs()){if(i===t){bump(i,me,10);continue}bump(i,t,14*(.4+.6*V[i].p.cred)*trust(i,me));bump(i,me,-R(0,8))}
+  if(G.alive[t]&&t!==me)E.push({k:'say',who:t,text:line(t,'defend')})}
+ else E.push({k:'say',who:me,text:'……'});
+ await show(E);verdictVote(me,null)}
+async function verdictVote(x,pv){const ys=[],ns=[],ysI=[];G.noExec=false;G.lastExec=null;
+ for(const i of npcs()){if(i===x)continue;let ok;
+  if(i===G.mafia)ok=Math.random()<(groupSus(x)>32?.9:.45);
+  else{const row=alive().filter(j=>j!==i).map(j=>G.sus[i][j]);const mx=Math.max(...row);ok=G.sus[i][x]+R(-8,8)+groupSus(x)*V[i].p.band*.3>=Math.max(mx*.85,40)}
+  (ok?ys:ns).push(i===G.player?'나':sh(i));if(ok)ysI.push(i)}
+ if(pv!==null&&x!==G.player){(pv?ys:ns).push('나');if(pv)ysI.push(G.player)}
+ const E=[{k:'vote',rows:[{n:'찬성',c:ys.length,v:ys.join(', ')||'-'},{n:'반대',c:ns.length,v:ns.join(', ')||'-'}]}];
+ if(ys.length<=ns.length){E.push({k:'good',text:`처형이 부결됐다. ${jo(addrFull(x),'은')} 처형대에서 내려왔다.`});G.noExec=true;await show(E);return nextNight()}
+ if(x!==G.player)E.push({k:'say',who:x,text:line(x,'last')});
+ G.alive[x]=false;G.death[x]=`${G.day}일차 투표로 처형됨`;
+ if(x===G.player){E.push({k:'death',text:'마을 사람들이 나를 처형대로 끌고 갔다.'});await show(E);G.dead=true;G.deathWhy='주민 투표로 처형당했다.';addStat(false);if(!winCheck(E))return;return spectateChoice(()=>{G.day++;goNight()})}
+ if(x===G.mafia){E.push({k:'death',text:`${nm(x)}의 집 다락에서 피 묻은 손도끼가 나왔다.`},{k:'good',text:`${jo(nm(x),'은')} 마피아였다.`});await show(E);return end(true,`투표로 ${jo(nm(x),'을')} 처형했다.`)}
+ E.push({k:'death',text:`${jo(nm(x),'은')} 처형됐다. 그러나 마피아가 아니었다.`});
+ G.lastExec={x,yes:ysI,d:G.day};
+ for(const f of npcs())if(G.rel[f][x]>=.8){G.grudge.push({f,x,d:G.day});for(const y of ysI)if(y!==f){bump(f,y,10);G.rel[f][y]*=.6}}
+ const liars=[...new Set(G.claims.filter(c=>c.t===x&&(c.type==='pol_m'||c.type==='rep_m')&&G.alive[c.s]).map(c=>c.s))];
+ for(const s of liars){for(const i of npcs()){bump(i,s,20+40*V[i].p.logic);G.rel[i][s]*=.5}
+  const sage=argmax(npcs().filter(i=>i!==s),i=>V[i].p.logic);if(sage!=null)E.push({k:'say',who:sage,text:`${jo(addr(sage,s),'이')} ${jo(addr(sage,x),'을')} 마피아라고 했었죠. 그 말, 거짓이었네요.`})}
+ await show(E);if(!winCheck(E))return;nextNight()}
+function nextNight(){if(G.dead)return step('밤을 맞는다',()=>{G.day++;goNight()});setDock('',[{label:'밤을 맞는다',primary:true,fn:()=>{G.day++;goNight()}}])}
+
+function end(win,why){if(G.over)return;G.over=true;if(!G.dead)addStat(win);G.auto=false;renderBoard(true);setPhase(win?'day':'night');
+ const M=G.mafia,d=$('#dockIn');$('#dock').hidden=false;d.innerHTML='';const c=document.createElement('div');c.className='endcard '+(win?'win':'lose');
+ const s=getStats();const fake=V[M].role?`이번 판엔 진짜 ${V[M].job}${hasB(V[M].job)?'이':'가'} 없었다. ${jo(nm(M),'은')} 그 직업을 이용해 거짓말을 했다.`:'';
+ c.innerHTML=`<h2>${G.dead?(win?'나는 죽었지만, 마을이 이겼다':'마을도 끝내 무너졌다'):(win?'마을을 지켰다':'마피아에게 졌다')}</h2>`;
+ [G.dead?`${G.deathWhy} 관전 결과: ${why}`:why,`이번 판 마피아는 ${nm(M)}(${V[M].job})였다. ${fake}`,`마피아 성향: ${MSTYLE_TXT[G.ms]}`,`현장에서 ${jo(TRACE[M].item,'은')} ${G.clues.filter(c=>c.o===M).length}번, 다른 사람의 흔적은 ${G.clues.filter(c=>c.o!==M).length}번 나왔다.`,`지금까지 ${s.w}승 ${s.l}패`].forEach(t=>{const p=document.createElement('p');p.textContent=t;c.append(p)});
+ d.append(c);const w=document.createElement('div');w.className='btns';
+ const a=document.createElement('button');a.className='btn primary';a.textContent='새 판 시작';a.onclick=startGame;
+ const b=document.createElement('button');b.className='btn';b.textContent='처음 화면';b.onclick=()=>{$('#game').hidden=true;$('#dock').hidden=true;$('#intro').hidden=false;document.documentElement.dataset.phase='night';G=null;renderStats();window.scrollTo(0,0)};
+ w.append(a,b);d.append(w)}
+
+$('#startBtn').onclick=startGame;$('#notesBtn').onclick=()=>openNotes('notes');$('#cluesBtn').onclick=()=>openNotes('clues');$('#interBtn').onclick=()=>openNotes('inter');
+document.documentElement.dataset.phase='night';renderRoster();renderStats();
+</script>
+
+</body></html>

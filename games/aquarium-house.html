@@ -1,0 +1,736 @@
+<!doctype html><html><head><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script><script src="../assets/config.js"></script><script src="../assets/member.js" data-game="aquarium-house"></script><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>어항 하우스</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Do+Hyeon&family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans+KR:wght@400;500;600&display=swap">
+<style>
+/* Layout: 관찰창(아이소메트릭 단독주택)이 주인공, 아래(데스크톱은 오른쪽)에 지령·관찰일지·학습노트 */
+:root{
+  --bg:#e6ecec; --panel:#f8fafa; --line:#cdd8d9; --fg:#1a292e; --muted:#5d6f74;
+  --lawn:#357d49; --lawn-soft:#dcebdf; --flag:#c44d36; --stage:#c9dde2; --chip:#ffffffe0;
+  --f-display:"Do Hyeon","IBM Plex Sans KR",system-ui,sans-serif;
+  --f-body:"IBM Plex Sans KR",system-ui,-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#111a1d; --panel:#172226; --line:#2a3a3f; --fg:#e2ebec; --muted:#93a6ab;
+  --lawn:#62bb78; --lawn-soft:#1f3527; --flag:#ec7a5f; --stage:#1c2b31; --chip:#172226e6; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#111a1d; --panel:#172226; --line:#2a3a3f; --fg:#e2ebec; --muted:#93a6ab;
+  --lawn:#62bb78; --lawn-soft:#1f3527; --flag:#ec7a5f; --stage:#1c2b31; --chip:#172226e6; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:14px;line-height:1.55}
+.app{max-width:1200px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:14px 28px;display:grid;gap:14px;grid-template-columns:minmax(0,1fr)}
+@media (min-width:920px){.app{grid-template-columns:minmax(0,1.55fr) minmax(330px,1fr);align-items:start}}
+header.top{grid-column:1/-1;display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap}
+h1{font-family:var(--f-display);font-weight:400;font-size:30px;line-height:1;margin:0;letter-spacing:.01em;text-wrap:balance}
+h1 small{display:block;font-family:var(--f-body);font-size:12.5px;color:var(--muted);margin-top:6px;letter-spacing:0}
+.brain{font-size:12px;color:var(--muted);display:flex;gap:8px;align-items:center}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--muted);display:inline-block}
+.dot.on{background:var(--lawn)}
+.left{display:grid;gap:10px;min-width:0}
+.stage{position:relative;border-radius:14px;overflow:hidden;background:var(--stage);touch-action:none;user-select:none;-webkit-user-select:none}
+canvas#c{display:block;width:100%;cursor:grab}
+.hud{position:absolute;display:flex;gap:6px;align-items:center}
+.hud.tl{top:10px;left:10px}.hud.tr{top:10px;right:10px}.hud.br{bottom:10px;right:10px}
+.pill{background:var(--chip);border:1px solid var(--line);border-radius:999px;padding:4px 10px;font-size:12.5px;backdrop-filter:blur(6px)}
+.clock{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.seg{display:flex;background:var(--chip);border:1px solid var(--line);border-radius:999px;overflow:hidden;backdrop-filter:blur(6px)}
+.seg button{border:0;background:transparent;color:var(--fg);font:500 12px var(--f-body);padding:5px 10px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--lawn);color:#fff}
+.seg button:focus-visible,.btn:focus-visible,.chipbtn:focus-visible,.tab:focus-visible,input:focus-visible{outline:2px solid var(--lawn);outline-offset:2px}
+.card{position:absolute;left:10px;bottom:10px;max-width:min(300px,calc(100% - 70px));background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 12px;box-shadow:0 6px 20px #0000002a;display:grid;gap:8px}
+.card .nm{font-weight:600}
+.card .meta{font-size:12px;color:var(--muted)}
+.row{display:flex;gap:6px;flex-wrap:wrap}
+.btn{border:1px solid var(--line);background:var(--panel);color:var(--fg);border-radius:8px;padding:6px 11px;font:500 13px var(--f-body);cursor:pointer}
+.btn.primary{background:var(--lawn);border-color:var(--lawn);color:#fff}
+.btn.warn{color:var(--flag)}
+.btn:disabled{opacity:.5;cursor:default}
+form.cmd{display:flex;gap:8px}
+form.cmd input{flex:1;min-width:0;border:1px solid var(--line);background:var(--panel);color:var(--fg);border-radius:10px;padding:11px 12px;font:15px var(--f-body)}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chipbtn{border:1px dashed var(--line);background:transparent;color:var(--muted);border-radius:999px;padding:4px 10px;font:12.5px var(--f-body);cursor:pointer}
+.chipbtn:hover{color:var(--fg);border-color:var(--lawn)}
+.status{font-size:12.5px;color:var(--muted);min-height:1.4em}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;min-width:0;display:grid;grid-template-rows:auto 1fr}
+.tabs{display:flex;border-bottom:1px solid var(--line)}
+.tab{flex:1;border:0;background:transparent;color:var(--muted);font:500 14px var(--f-body);padding:11px 8px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
+.tab[aria-selected="true"]{color:var(--fg);border-bottom-color:var(--lawn)}
+.pane{padding:12px 14px;max-height:560px;overflow:auto}
+.log{list-style:none;margin:0;padding:0;display:grid;gap:0}
+.log li{display:grid;grid-template-columns:62px minmax(0,1fr);gap:8px;padding:8px 0;border-bottom:1px solid var(--line)}
+.log li:last-child{border-bottom:0}
+.log .t{font-family:var(--f-mono);font-size:11.5px;color:var(--muted);padding-top:2px;font-variant-numeric:tabular-nums}
+.log .k{display:inline-block;font-size:10.5px;letter-spacing:.06em;padding:0 6px;border-radius:4px;margin-right:6px;vertical-align:1px;border:1px solid var(--line);color:var(--muted)}
+.log .k.ai{color:var(--lawn);border-color:var(--lawn)}
+.log .k.you{color:var(--flag);border-color:var(--flag)}
+.log .why{color:var(--muted);font-size:12.5px}
+.log .fb{display:flex;gap:6px;margin-top:5px}
+.log .fb button{font-size:12px;padding:3px 9px}
+.log .rated{font-size:12px;color:var(--muted);margin-top:3px}
+h3{font-family:var(--f-display);font-weight:400;font-size:18px;margin:4px 0 8px}
+.sec{display:grid;gap:6px;margin-bottom:16px}
+.bar{display:grid;grid-template-columns:78px minmax(0,1fr) 40px;gap:8px;align-items:center;font-size:13px}
+.track{position:relative;height:10px;background:var(--bg);border-radius:5px;overflow:hidden}
+.track::after{content:"";position:absolute;left:50%;top:0;bottom:0;width:1px;background:var(--line)}
+.fill{position:absolute;top:0;bottom:0;border-radius:5px}
+.num{font-family:var(--f-mono);font-size:11.5px;color:var(--muted);text-align:right;font-variant-numeric:tabular-nums}
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.stat{border:1px solid var(--line);border-radius:10px;padding:8px 10px}
+.stat b{display:block;font-family:var(--f-mono);font-size:18px;font-weight:500;font-variant-numeric:tabular-nums}
+.stat span{font-size:11.5px;color:var(--muted)}
+.lessons{margin:0;padding-left:18px;display:grid;gap:4px;font-size:13px}
+.lessons .d{font-family:var(--f-mono);font-size:11px;color:var(--muted)}
+.foot{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:center;font-size:12px;color:var(--muted)}
+svg.spark{width:100%;height:46px;display:block}
+@media (prefers-reduced-motion: reduce){*{scroll-behavior:auto}}
+</style>
+
+<div class="app">
+  <header class="top">
+    <h1>어항 하우스<small>디자이너 AI가 혼자 집을 꾸밉니다. 지켜보다가 지령을 내리고, 좋아·별로로 가르치세요.</small></h1>
+    <div class="brain"><span class="dot" id="brainDot"></span><span id="brainTxt">두뇌 연결 확인 중…</span></div>
+  </header>
+
+  <div class="left">
+    <div class="stage" id="stage">
+      <canvas id="c" aria-label="집 관찰창"></canvas>
+      <div class="hud tl"><span class="pill clock" id="clock">1일차 08:00</span></div>
+      <div class="hud tr">
+        <div class="seg" role="group" aria-label="시간 속도">
+          <button id="sp0" aria-pressed="false">정지</button>
+          <button id="sp1" aria-pressed="true">1×</button>
+          <button id="sp3" aria-pressed="false">4×</button>
+        </div>
+      </div>
+      <div class="hud br">
+        <div class="seg" role="group" aria-label="확대">
+          <button id="zOut" aria-label="축소">−</button>
+          <button id="zIn" aria-label="확대">＋</button>
+        </div>
+      </div>
+      <div class="card" id="card" hidden>
+        <div><div class="nm" id="cardName"></div><div class="meta" id="cardMeta"></div></div>
+        <div class="row">
+          <button class="btn primary" id="cardLike">좋아</button>
+          <button class="btn warn" id="cardNo">별로, 치워줘</button>
+          <button class="btn" id="cardClose">닫기</button>
+        </div>
+      </div>
+    </div>
+
+    <form class="cmd" id="cmdForm" autocomplete="off">
+      <input id="cmd" type="text" maxlength="200" placeholder="지령: 예) 거실을 식물로 가득 채워줘">
+      <button class="btn primary" id="cmdBtn" type="submit">지령</button>
+    </form>
+    <div class="chips" id="chips"></div>
+    <div class="status" id="status" aria-live="polite"></div>
+  </div>
+
+  <section class="panel">
+    <div class="tabs" role="tablist">
+      <button class="tab" role="tab" id="tabLog" aria-selected="true">관찰 일지</button>
+      <button class="tab" role="tab" id="tabLearn" aria-selected="false">학습 노트</button>
+    </div>
+    <div class="pane" id="paneLog"><ul class="log" id="log"></ul></div>
+    <div class="pane" id="paneLearn" hidden>
+      <div class="sec"><div class="stats" id="stats"></div></div>
+      <div class="sec"><h3>취향 일치도 추이</h3><svg class="spark" id="spark" viewBox="0 0 300 46" preserveAspectRatio="none"></svg></div>
+      <div class="sec"><h3>스타일 선호</h3><div id="styleBars"></div></div>
+      <div class="sec"><h3>요소 선호</h3><div id="tagBars"></div></div>
+      <div class="sec"><h3>배운 것</h3><ol class="lessons" id="lessons"></ol></div>
+      <div class="foot"><span id="saveTxt">저장 위치 확인 중</span><button class="btn warn" id="resetBtn" type="button">새 집에서 다시 시작</button></div>
+    </div>
+  </section>
+</div>
+
+<script>
+(()=>{
+"use strict";
+// ---------- 데이터 정의 ----------
+const STYLES={
+  modern:{n:'모던',p:{main:'#d7dadd',accent:'#2c3034',wood:'#b8a68f',metal:'#8b949b',soft:'#a7b9c4',floor:'#c4c1bb',wall:'#eceef0'}},
+  vintage:{n:'빈티지',p:{main:'#8e4b33',accent:'#d4a03f',wood:'#6a4429',metal:'#a2895a',soft:'#c99068',floor:'#7b5337',wall:'#e3d2b2'}},
+  farmhouse:{n:'파머하우스',p:{main:'#ece4d4',accent:'#5d7c69',wood:'#a9845b',metal:'#3d3d3b',soft:'#d6cab1',floor:'#b38f64',wall:'#f2ecdf'}},
+  midcentury:{n:'미드센추리',p:{main:'#2e7c84',accent:'#df782d',wood:'#7b4c2b',metal:'#c7a04a',soft:'#e8c368',floor:'#8e5d3a',wall:'#ede3cd'}},
+  boho:{n:'보헤미안',p:{main:'#c56945',accent:'#6e8e4d',wood:'#9b6b44',metal:'#b08b5c',soft:'#e6b88d',floor:'#a77b54',wall:'#efdfca'}},
+};
+const SK=Object.keys(STYLES);
+const TAGS={plant:'식물',light:'조명',books:'책',cozy:'아늑함',music:'음악',minimal:'여백'};
+const TK=Object.keys(TAGS);
+const legs=(x,y,w,d,h,s,c)=>[[x,y,0,s,s,h,c],[x+w-s,y,0,s,s,h,c],[x,y+d-s,0,s,s,h,c],[x+w-s,y+d-s,0,s,s,h,c]];
+const TYPES={
+  sofa:{n:'소파',w:2,d:1,wall:1,tags:['cozy'],parts:[[0.08,0.06,0,1.84,0.22,0.72,'main'],[0.08,0.26,0,0.2,0.66,0.48,'main'],[0.28,0.26,0,1.44,0.66,0.32,'main'],[1.72,0.26,0,0.2,0.66,0.48,'main'],[0.32,0.32,0.32,0.66,0.52,0.08,'soft'],[1.02,0.32,0.32,0.66,0.52,0.08,'soft']]},
+  armchair:{n:'안락의자',tags:['cozy'],parts:[[0.12,0.1,0,0.76,0.18,0.64,'main'],[0.12,0.28,0,0.14,0.6,0.42,'main'],[0.26,0.28,0,0.48,0.6,0.3,'main'],[0.74,0.28,0,0.14,0.6,0.42,'main'],[0.27,0.34,0.3,0.46,0.46,0.07,'soft']]},
+  coffee:{n:'커피테이블',tags:[],parts:[...legs(0.18,0.22,0.64,0.56,0.24,0.06,'metal'),[0.14,0.18,0.24,0.72,0.64,0.06,'wood']]},
+  tv:{n:'TV',w:2,d:1,wall:1,tags:[],parts:[[0.1,0.06,0,1.8,0.42,0.36,'wood'],[0.35,0.14,0.36,1.3,0.06,0.72,'#16191c']]},
+  bookshelf:{n:'책장',wall:1,tags:['books'],parts:[[0.1,0.05,0,0.8,0.36,1.5,'wood'],[0.16,0.37,0.12,0.68,0.05,0.28,'accent'],[0.16,0.37,0.5,0.68,0.05,0.28,'soft'],[0.16,0.37,0.88,0.68,0.05,0.28,'main']]},
+  lamp:{n:'플로어 램프',tags:['light'],light:1.25,parts:[[0.38,0.38,0,0.24,0.24,0.05,'metal'],[0.47,0.47,0,0.06,0.06,1.12,'metal'],[0.3,0.3,1.08,0.4,0.4,0.32,'soft']]},
+  plant:{n:'화분',tags:['plant'],parts:[[0.3,0.3,0,0.4,0.4,0.32,'accent'],['leaf',0.5,0.5,0.62,0.3]]},
+  rug:{n:'러그',w:2,d:2,flat:1,tags:['cozy'],parts:[[0.1,0.1,0,1.8,1.8,0.015,'soft'],[0.35,0.35,0.015,1.3,1.3,0.01,'accent']]},
+  dining:{n:'식탁',w:2,d:1,tags:[],parts:[...legs(0.18,0.2,1.64,0.6,0.5,0.07,'wood'),[0.1,0.12,0.5,1.8,0.76,0.07,'wood']]},
+  chair:{n:'의자',tags:[],parts:[...legs(0.28,0.3,0.44,0.44,0.3,0.05,'wood'),[0.26,0.22,0.3,0.48,0.06,0.5,'wood'],[0.26,0.26,0.3,0.48,0.5,0.05,'main']]},
+  counter:{n:'조리대',wall:1,tags:[],parts:[[0,0.05,0,1,0.6,0.6,'main'],[0,0.03,0.6,1,0.64,0.05,'metal']]},
+  fridge:{n:'냉장고',wall:1,tags:[],parts:[[0.08,0.05,0,0.84,0.66,1.45,'main'],[0.76,0.71,0.75,0.05,0.02,0.4,'metal']]},
+  stove:{n:'오븐레인지',wall:1,tags:[],parts:[[0,0.05,0,1,0.6,0.6,'#3a3d40'],[0.05,0.08,0.6,0.9,0.55,0.04,'#232527'],[0.12,0.65,0.14,0.76,0.01,0.34,'#5b6066']]},
+  bed:{n:'침대',w:2,d:2,wall:1,tags:['cozy'],parts:[[0.15,0.04,0,1.7,0.14,0.85,'wood'],[0.15,0.18,0,1.7,1.72,0.22,'wood'],[0.2,0.22,0.22,1.6,1.62,0.18,'#f3f0ea'],[0.32,0.3,0.4,0.58,0.32,0.1,'#fbfbf8'],[1.1,0.3,0.4,0.58,0.32,0.1,'#fbfbf8'],[0.18,0.78,0.4,1.64,1.08,0.07,'main']]},
+  nightstand:{n:'협탁',wall:1,tags:['light'],light:0.8,parts:[[0.2,0.1,0,0.6,0.5,0.45,'wood'],[0.45,0.28,0.45,0.1,0.1,0.15,'metal'],[0.33,0.18,0.6,0.34,0.32,0.22,'soft']]},
+  wardrobe:{n:'옷장',wall:1,tags:[],parts:[[0.05,0.05,0,0.9,0.56,1.65,'wood'],[0.48,0.61,0.2,0.04,0.01,1.25,'accent']]},
+  desk:{n:'책상',w:2,d:1,wall:1,tags:['books'],parts:[[0.1,0.1,0,0.08,0.62,0.55,'wood'],[1.82,0.1,0,0.08,0.62,0.55,'wood'],[0.1,0.1,0.55,1.8,0.62,0.06,'wood'],[0.7,0.16,0.61,0.6,0.05,0.38,'#1b1e21']]},
+  tub:{n:'욕조',w:2,d:1,wall:1,tags:[],parts:[[0.05,0.06,0,1.9,0.86,0.46,'#f4f3ef'],[0.2,0.2,0.46,1.6,0.58,0.005,'#9cc9d6']]},
+  toilet:{n:'변기',wall:1,tags:[],parts:[[0.3,0.05,0,0.4,0.2,0.62,'#f4f3ef'],[0.32,0.25,0,0.36,0.44,0.36,'#f4f3ef']]},
+  sink:{n:'세면대',wall:1,tags:[],parts:[[0.15,0.05,0,0.7,0.5,0.72,'main'],[0.2,0.1,0.72,0.6,0.4,0.03,'#e8eef0']]},
+  piano:{n:'피아노',w:2,d:1,wall:1,tags:['music'],parts:[[0.1,0.05,0,1.8,0.45,0.95,'#1c1b1d'],[0.2,0.5,0.55,1.6,0.25,0.06,'#1c1b1d'],[0.22,0.52,0.61,1.56,0.2,0.02,'#f5f3ec']]},
+};
+for(const k in TYPES){const t=TYPES[k];t.w=t.w||1;t.d=t.d||1;t.h=Math.max(...t.parts.filter(p=>p[0]!=='leaf').map(p=>p[2]+p[5]),t.parts.some(p=>p[0]==='leaf')?0.9:0);}
+const ROOMS={
+  bedroom:{n:'침실',x:0,y:0,w:6,h:4,types:['bed','nightstand','wardrobe','rug','lamp','plant','desk','armchair'],ess:{bed:1,nightstand:1,wardrobe:1}},
+  bath:{n:'욕실',x:6,y:0,w:3,h:4,types:['tub','toilet','sink','plant'],ess:{tub:1,toilet:1,sink:1}},
+  study:{n:'서재',x:9,y:0,w:3,h:4,types:['desk','chair','bookshelf','lamp','plant','armchair'],ess:{desk:1,chair:1}},
+  living:{n:'거실',x:0,y:4,w:7,h:6,types:['sofa','armchair','coffee','tv','bookshelf','lamp','plant','rug','piano'],ess:{sofa:1,coffee:1,tv:1}},
+  kitchen:{n:'주방',x:7,y:4,w:5,h:6,types:['counter','fridge','stove','dining','chair','plant','lamp'],ess:{counter:2,fridge:1,stove:1,dining:1,chair:2}},
+};
+const RK=Object.keys(ROOMS);
+const MAXC={sofa:1,armchair:2,coffee:1,tv:1,bookshelf:3,lamp:2,plant:4,rug:1,dining:1,chair:4,counter:4,fridge:1,stove:1,bed:1,nightstand:2,wardrobe:1,desk:1,tub:1,toilet:1,sink:1,piano:1};
+const HX=2,HY=2,HW=12,HH=10,LW=16,LH=14;
+const KEEP=new Set(['2,3','2,4','7,3','7,4','10,3','10,4','6,7','7,7','3,9','3,8']);
+const roomAt=(x,y)=>{for(const k of RK){const r=ROOMS[k];if(x>=r.x&&x<r.x+r.w&&y>=r.y&&y<r.y+r.h)return k}return null};
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const rnd=Math.random;
+const pick=a=>a[Math.floor(rnd()*a.length)];
+
+// ---------- 상태 ----------
+function freshState(){
+  const fav=pick(SK);
+  const s={v:1,day:1,min:8*60,nid:1,items:[],rooms:{},taste:{styles:{},tags:{},types:{}},
+    lessons:[],log:[],fbHist:[],agree:[],stats:{likes:0,dislikes:0,cmds:0,acts:0},directives:[],fav,dayFb:{l:0,d:0},savedAt:0};
+  SK.forEach(k=>s.taste.styles[k]=0);TK.forEach(k=>s.taste.tags[k]=0);
+  s.taste.styles[fav]=0.3;
+  RK.forEach(k=>s.rooms[k]={style:'farmhouse'});
+  s.rooms.bath.style='modern';
+  const add=(type,room,x,y,rot,style)=>s.items.push({id:'i'+(s.nid++),type,room,x,y,rot,style,born:1});
+  add('tub','bath',6,0,0,'modern');add('toilet','bath',8,1,1,'modern');add('sink','bath',8,3,1,'modern');
+  add('fridge','kitchen',7,4,0,'modern');
+  return s;
+}
+let S=freshState();
+function stamp(){const h=Math.floor(S.min/60),m=Math.floor(S.min%60);return `${S.day}일 ${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`}
+function addLog(kind,text,extra){const e={id:'L'+(S.nid++),t:stamp(),kind,text,...(extra||{})};S.log.unshift(e);if(S.log.length>160)S.log.length=160;dirty();renderLog();return e}
+function addLesson(text){S.lessons.unshift({d:`${S.day}일`,text});if(S.lessons.length>40)S.lessons.length=40;dirty();renderLearn()}
+
+// ---------- 저장 ----------
+const LS='eohang-house-v1';
+let db=null,uid=null,isDirty=false,saving=false,lastSave=0,saveMode='이 브라우저에만 저장 중';
+function dirty(){isDirty=true}
+async function saveNow(){
+  if(!isDirty||saving)return;saving=true;isDirty=false;S.savedAt=Date.now();
+  const json=JSON.stringify(S);
+  try{localStorage.setItem(LS,json)}catch(e){}
+  if(db&&uid){try{await db.doc('data/users/'+uid+'/save').set({json})}catch(e){}}
+  saving=false;lastSave=performance.now();
+}
+function valid(o){return o&&o.v===1&&Array.isArray(o.items)&&o.taste&&o.rooms}
+function loadLocal(){try{const raw=localStorage.getItem(LS);if(raw){const o=JSON.parse(raw);if(valid(o))return o}}catch(e){}return null}
+const local=loadLocal();
+if(local)S=local;
+
+// ---------- 캔버스 ----------
+const cv=document.getElementById('c'),ctx=cv.getContext('2d'),stageEl=document.getElementById('stage');
+let CW=0,CH=0,DPR=1,TW=24,ZH=14,OX=0,OY=0,zoom=1.15,panX=0,panY=0;
+function resize(){
+  const w=stageEl.clientWidth;const h=Math.round(Math.min(w/1.22,window.innerHeight*0.62,640));
+  DPR=Math.min(window.devicePixelRatio||1,2);CW=w;CH=h;
+  cv.width=Math.round(w*DPR);cv.height=Math.round(h*DPR);cv.style.height=h+'px';
+}
+window.addEventListener('resize',resize);
+function layout(){
+  const base=Math.min(CW/((LW+LH)/2),CH/((LW+LH)/4+1.3))*0.98;
+  TW=base*zoom;ZH=TW*0.6;
+  const cx=HX+HW/2,cy=HY+HH/2;
+  OX=CW/2+panX-(cx-cy)*TW/2;OY=CH/2+panY-(cx+cy)*TW/4+0.5*ZH;
+}
+const P=(x,y,z)=>[OX+(x-y)*TW/2,OY+(x+y)*TW/4-(z||0)*ZH];
+const shadeCache=new Map();
+function shade(hex,f){const k=hex+f;let v=shadeCache.get(k);if(v)return v;
+  const n=parseInt(hex.slice(1,7),16);let r=n>>16,g=(n>>8)&255,b=n&255;
+  if(f<1){r*=f;g*=f;b*=f}else{r+=(255-r)*(f-1);g+=(255-g)*(f-1);b+=(255-b)*(f-1)}
+  v=`rgb(${r|0},${g|0},${b|0})`;shadeCache.set(k,v);return v}
+function mix(a,b,t){const A=parseInt(a.slice(1),16),B=parseInt(b.slice(1),16);const f=(s)=>[(s>>16)&255,(s>>8)&255,s&255];const x=f(A),y=f(B);return '#'+x.map((v,i)=>Math.round(v+(y[i]-v)*t).toString(16).padStart(2,'0')).join('')}
+function poly(pts,fill,stroke){ctx.beginPath();ctx.moveTo(pts[0][0],pts[0][1]);for(let i=1;i<pts.length;i++)ctx.lineTo(pts[i][0],pts[i][1]);ctx.closePath();ctx.fillStyle=fill;ctx.fill();if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=0.6;ctx.stroke()}}
+function box(x,y,z,w,d,h,col){
+  const a=P(x,y+d,z),b=P(x+w,y+d,z),c=P(x+w,y,z),at=P(x,y+d,z+h),bt=P(x+w,y+d,z+h),ct=P(x+w,y,z+h),dt=P(x,y,z+h);
+  const st='rgba(0,0,0,0.13)';
+  if(h>0.02){poly([a,b,bt,at],shade(col,0.84),st);poly([b,c,ct,bt],shade(col,0.68),st)}
+  poly([dt,ct,bt,at],col,st);
+}
+function foliage(x,y,z,r){
+  const g=['#3f7d3f','#4f9447','#6aa84f','#3a6e3a'];
+  const offs=[[-.12,-.05,0],[.12,-.04,.02],[0,.1,.05],[-.05,-.1,.18],[.07,.06,.2],[0,0,.32]];
+  offs.forEach((o,i)=>{const p=P(x+o[0],y+o[1],z+o[2]);ctx.beginPath();ctx.arc(p[0],p[1],r*TW*(i===5?0.5:0.62),0,Math.PI*2);ctx.fillStyle=g[i%4];ctx.fill()});
+}
+function drawItem(it){
+  const t=TYPES[it.type],pal=STYLES[it.style].p;
+  const parts=t.parts.map(p=>{if(p[0]==='leaf'){let[_,cx,cy,z,r]=p;if(it.rot)[cx,cy]=[cy,cx];return{leaf:1,cx,cy,z,r,k:cx+cy,dz:z}}
+    let[dx,dy,dz,w,d,h,c]=p;if(it.rot){[dx,dy]=[dy,dx];[w,d]=[d,w]}return{dx,dy,dz,w,d,h,c,k:dx+dy+(w+d)/2}});
+  parts.sort((a,b)=>(a.dz-b.dz)||(a.k-b.k));
+  const bx=HX+it.x,by=HY+it.y;
+  for(const p of parts){if(p.leaf){foliage(bx+p.cx,by+p.cy,p.z,p.r);continue}
+    const col=p.c[0]==='#'?p.c:pal[p.c];box(bx+p.dx,by+p.dy,p.dz,p.w,p.d,p.h,col)}
+  if(it===selected){const fw=it.rot?t.d:t.w,fd=it.rot?t.w:t.d;const pts=[P(bx,by,0),P(bx+fw,by,0),P(bx+fw,by+fd,0),P(bx,by+fd,0)];ctx.save();ctx.setLineDash([4,3]);poly(pts,'rgba(255,255,255,0)', '#ffffff');ctx.strokeStyle=css.lawn;ctx.lineWidth=2;ctx.stroke();ctx.restore()}
+}
+const fp=it=>{const t=TYPES[it.type];return it.rot?[t.d,t.w]:[t.w,t.d]};
+
+// 집 외형
+let css={};
+function readCss(){const s=getComputedStyle(document.documentElement);['stage','lawn','fg','panel','line','flag'].forEach(k=>css[k]=s.getPropertyValue('--'+k).trim()||'#888')}
+const TREES=[[1,1.2],[14.2,1.6],[0.8,12.4],[14.6,11.6]];
+function drawGround(){
+  for(let x=0;x<LW;x++)for(let y=0;y<LH;y++){
+    const inHouse=x>=HX&&x<HX+HW&&y>=HY&&y<HY+HH;if(inHouse)continue;
+    let col=((x+y)%2)?'#6fae5a':'#67a554';
+    if(x===HX+3&&y>=HY+HH)col=((y)%2)?'#cfc8b8':'#c6bfae';
+    if(x>=HX+HW-1&&x<=HX+HW&&y>=HY+HH)col='#a9abad';
+    poly([P(x,y,0),P(x+1,y,0),P(x+1,y+1,0),P(x,y+1,0)],col);
+  }
+  // 집 바닥
+  for(let x=0;x<HW;x++)for(let y=0;y<HH;y++){
+    const r=roomAt(x,y);let f=STYLES[S.rooms[r].style].p.floor;
+    if(r==='bath')f=mix(f,'#e4ecee',0.72);
+    const c=((x+y)%2)?shade(f,0.96):f;
+    poly([P(HX+x,HY+y,0),P(HX+x+1,HY+y,0),P(HX+x+1,HY+y+1,0),P(HX+x,HY+y+1,0)],c,'rgba(0,0,0,0.05)');
+  }
+}
+function wallCol(r){return STYLES[S.rooms[r].style].p.wall}
+const WH=1.7;
+function drawBackWalls(night){
+  // x=0 벽 (y 방향), y=0 벽 (x 방향)
+  for(let j=HH-1;j>=0;j--){const r=roomAt(0,j);box(HX-0.12,HY+j,0,0.12,1,WH,wallCol(r));
+    if(j%3===1){const q=[P(HX,HY+j+0.25,0.6),P(HX,HY+j+0.75,0.6),P(HX,HY+j+0.75,1.3),P(HX,HY+j+0.25,1.3)];poly(q,night?'#f3d58a':'#bcdbe6','rgba(0,0,0,0.25)')}}
+  box(HX-0.12,HY-0.12,0,0.12,0.12,WH,wallCol('bedroom'));
+  for(let i=0;i<HW;i++){const r=roomAt(i,0);box(HX+i,HY-0.12,0,1,0.12,WH,wallCol(r));
+    if(i%3===1){const q=[P(HX+i+0.25,HY,0.6),P(HX+i+0.75,HY,0.6),P(HX+i+0.75,HY,1.3),P(HX+i+0.25,HY,1.3)];poly(q,night?'#f3d58a':'#bcdbe6','rgba(0,0,0,0.25)')}}
+}
+function wallObjs(list){
+  const lowH=0.34,frontH=0.42,th=0.12;
+  const push=(x,y,w,d,h,col)=>list.push({k:x+y+(w+d)/2,draw:()=>box(x,y,0,w,d,h,col)});
+  // 칸막이 y=4
+  for(let i=0;i<HW;i++){if(i===2||i===7||i===10)continue;push(HX+i,HY+4-th/2,1,th,lowH,wallCol(roomAt(i,4)))}
+  for(let j=0;j<4;j++){push(HX+6-th/2,HY+j,th,1,lowH,wallCol('bath'));push(HX+9-th/2,HY+j,th,1,lowH,wallCol('study'))}
+  for(let j=4;j<HH;j++){if(j===7)continue;push(HX+7-th/2,HY+j,th,1,lowH,wallCol('kitchen'))}
+  // 앞쪽 외벽
+  for(let i=0;i<HW;i++){if(i===3)continue;push(HX+i,HY+HH,1,th,frontH,wallCol(roomAt(i,HH-1)))}
+  for(let j=0;j<HH;j++)push(HX+HW,HY+j,th,1,frontH,wallCol(roomAt(HW-1,j)));
+  // 현관 계단
+  list.push({k:HX+3+HY+HH+0.6,draw:()=>box(HX+3,HY+HH,0,1,0.5,0.08,'#bdb6a6')});
+}
+function decorObjs(list){
+  TREES.forEach(([x,y])=>list.push({k:x+y,draw:()=>{box(x-0.08,y-0.08,0,0.16,0.16,0.9,'#7a5634');
+    const g=['#3d7a3b','#4c8f45','#5aa04d'];[[0,0,0.9,0.55],[-.2,.1,1.2,0.42],[.15,-.1,1.35,0.4],[0,0,1.6,0.32]].forEach((o,i)=>{const p=P(x+o[0],y+o[1],o[2]);ctx.beginPath();ctx.arc(p[0],p[1],o[3]*TW,0,7);ctx.fillStyle=g[i%3];ctx.fill()})}}));
+  // 우체통
+  const mx=HX+2.2,my=HY+HH+2.4;
+  list.push({k:mx+my,draw:()=>{box(mx,my,0,0.08,0.08,0.55,'#6b6f72');box(mx-0.12,my-0.05,0.55,0.32,0.18,0.18,'#2f5d8a');box(mx+0.2,my+0.1,0.6,0.03,0.03,0.25,css.flag||'#c44d36')}});
+  // 울타리
+  for(let x=0;x<LW;x++){if(x===HX+3)continue;list.push({k:x+LH,draw:()=>{box(x+0.45,LH-0.08,0,0.1,0.08,0.45,'#f5f3ee');box(x,LH-0.06,0.28,1,0.04,0.06,'#f5f3ee')}})}
+  for(let y=0;y<LH;y++){if(y>=HY+HH-0)if(false)continue;list.push({k:LW+y,draw:()=>{box(LW-0.08,y+0.45,0,0.08,0.1,0.45,'#f5f3ee');box(LW-0.06,y,0.28,0.04,1,0.06,'#f5f3ee')}})}
+}
+// 주민
+const PEOPLE=[
+  {name:'에밀리',x:3,y:6,tx:3,ty:6,shirt:'#d36b5a',hair:'#3b2a20',skin:'#f0c9a8',say:'',until:0},
+  {name:'잭',x:9,y:7,tx:9,ty:7,shirt:'#4b7bb5',hair:'#a7783f',skin:'#e7bb95',say:'',until:0},
+  {name:'버디',dog:1,x:5,y:8,tx:5,ty:8,shirt:'#b98552',say:'',until:0},
+];
+function occMap(){const m=new Map();for(const it of S.items){const[fw,fd]=fp(it);for(let i=0;i<fw;i++)for(let j=0;j<fd;j++){const key=(it.x+i)+','+(it.y+j);if(TYPES[it.type].flat){if(!m.has(key))m.set(key,null)}else m.set(key,it)}}return m}
+function freeTiles(){const m=occMap(),out=[];for(let x=0;x<HW;x++)for(let y=0;y<HH;y++){if(!m.get(x+','+y))out.push([x,y])}return out}
+function stepPeople(dt){
+  const sp=dt*0.9;
+  for(const p of PEOPLE){const dx=p.tx-p.x,dy=p.ty-p.y,dist=Math.hypot(dx,dy);
+    if(dist<0.05){if(rnd()<dt*0.35){if(p.dog&&rnd()<0.6){const o=PEOPLE[rnd()<0.5?0:1];p.tx=clamp(o.x+0.6,0.3,HW-0.3);p.ty=clamp(o.y+0.4,0.3,HH-0.3)}else{const f=freeTiles();if(f.length){const t=pick(f);p.tx=t[0]+0.5;p.ty=t[1]+0.5}}}}
+    else{const s=Math.min(dist,sp*(p.dog?1.3:1));if(Math.abs(dx)>0.04)p.x+=Math.sign(dx)*Math.min(Math.abs(dx),s);else p.y+=Math.sign(dy)*Math.min(Math.abs(dy),s)}}
+}
+function personObjs(list,now){
+  for(const p of PEOPLE){const x=HX+p.x,y=HY+p.y;list.push({k:x+y+0.1,draw:()=>{
+    const sh=P(x,y,0);ctx.beginPath();ctx.ellipse(sh[0],sh[1],TW*0.16,TW*0.08,0,0,7);ctx.fillStyle='rgba(0,0,0,0.18)';ctx.fill();
+    if(p.dog){box(x-0.17,y-0.08,0.12,0.34,0.16,0.14,p.shirt);box(x+0.12,y-0.07,0.2,0.14,0.14,0.14,shade(p.shirt,0.9));}
+    else{box(x-0.1,y-0.08,0,0.2,0.16,0.36,'#3b4552');box(x-0.13,y-0.1,0.36,0.26,0.2,0.36,p.shirt);
+      const hp=P(x,y,0.86);ctx.beginPath();ctx.arc(hp[0],hp[1],TW*0.12,0,7);ctx.fillStyle=p.skin;ctx.fill();
+      ctx.beginPath();ctx.arc(hp[0],hp[1]-TW*0.04,TW*0.12,Math.PI,0);ctx.fillStyle=p.hair;ctx.fill();}
+    if(p.say&&now<p.until)bubble(P(x,y,p.dog?0.6:1.15),p.name+': '+p.say);
+  }})}
+}
+function bubble(pt,text){
+  ctx.font='500 12px "IBM Plex Sans KR",system-ui,sans-serif';const w=Math.min(ctx.measureText(text).width+14,CW*0.7);
+  let bx=clamp(pt[0]-w/2,6,CW-w-6),by=pt[1]-30;
+  ctx.fillStyle='rgba(255,255,255,0.95)';ctx.strokeStyle='rgba(0,0,0,0.15)';ctx.lineWidth=1;
+  ctx.beginPath();if(ctx.roundRect)ctx.roundRect(bx,by,w,22,8);else ctx.rect(bx,by,w,22);ctx.fill();ctx.stroke();
+  ctx.fillStyle='#1a292e';ctx.textBaseline='middle';ctx.fillText(text,bx+7,by+11,w-14);
+}
+let pops=[];
+function addPop(it,text){pops.push({x:HX+it.x+0.5,y:HY+it.y+0.5,text,born:performance.now()})}
+
+function nightF(){const h=S.min/60;if(h<5||h>=21.5)return 1;if(h<7)return 1-(h-5)/2;if(h>=18.5)return (h-18.5)/3;return 0}
+let selected=null;
+function draw(now){
+  layout();
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+  ctx.fillStyle=css.stage;ctx.fillRect(0,0,CW,CH);
+  const nf=nightF();
+  drawGround();
+  drawBackWalls(nf>0.5);
+  // 평평한 것(러그) 먼저
+  for(const it of S.items)if(TYPES[it.type].flat)drawItem(it);
+  const list=[];
+  for(const it of S.items){if(TYPES[it.type].flat)continue;const[fw,fd]=fp(it);list.push({k:HX+it.x+HY+it.y+(fw+fd)/2,draw:()=>drawItem(it)})}
+  wallObjs(list);decorObjs(list);personObjs(list,now);
+  list.sort((a,b)=>a.k-b.k);
+  // 말풍선은 맨 위에
+  const later=[];
+  for(const o of list)o.draw();
+  // 밤
+  if(nf>0){ctx.fillStyle=`rgba(12,18,44,${0.5*nf})`;ctx.fillRect(0,0,CW,CH);
+    ctx.globalCompositeOperation='lighter';
+    for(const it of S.items){const t=TYPES[it.type];if(!t.light)continue;const[fw,fd]=fp(it);const p=P(HX+it.x+fw/2,HY+it.y+fd/2,t.light);
+      const r=TW*(t.light>1?2.6:1.6);const g=ctx.createRadialGradient(p[0],p[1],0,p[0],p[1],r);g.addColorStop(0,`rgba(255,196,110,${0.55*nf})`);g.addColorStop(1,'rgba(255,196,110,0)');ctx.fillStyle=g;ctx.fillRect(p[0]-r,p[1]-r,r*2,r*2)}
+    ctx.globalCompositeOperation='source-over';
+    for(const p of PEOPLE)if(p.say&&now<p.until)bubble(P(HX+p.x,HY+p.y,p.dog?0.6:1.15),p.name+': '+p.say);
+  }
+  // 팝업
+  pops=pops.filter(p=>now-p.born<2600);
+  for(const p of pops){const a=(now-p.born)/2600;const pt=P(p.x,p.y,1.4+a*0.8);ctx.globalAlpha=1-a;
+    ctx.font='600 12.5px "IBM Plex Sans KR",system-ui,sans-serif';const w=ctx.measureText(p.text).width+14;
+    ctx.fillStyle=css.lawn;ctx.beginPath();if(ctx.roundRect)ctx.roundRect(pt[0]-w/2,pt[1]-11,w,22,11);else ctx.rect(pt[0]-w/2,pt[1]-11,w,22);ctx.fill();
+    ctx.fillStyle='#fff';ctx.textBaseline='middle';ctx.textAlign='center';ctx.fillText(p.text,pt[0],pt[1]);ctx.textAlign='left';ctx.globalAlpha=1}
+}
+
+// ---------- AI 두뇌 (기본 학습기) ----------
+const T=S=>S.taste;
+function countIn(room,type){return S.items.filter(i=>i.room===room&&i.type===type).length}
+function occupancy(room){const r=ROOMS[room];let a=0;for(const it of S.items)if(it.room===room&&!TYPES[it.type].flat){const[fw,fd]=fp(it);a+=fw*fd}return a/(r.w*r.h)}
+function prefFill(){return clamp(0.4-0.22*S.taste.tags.minimal,0.18,0.6)}
+function tagSum(type){return TYPES[type].tags.reduce((s,t)=>s+(S.taste.tags[t]||0),0)}
+function topStyle(){return SK.slice().sort((a,b)=>S.taste.styles[b]-S.taste.styles[a])[0]}
+function sampleStyle(room){const w=SK.map(k=>Math.exp((S.taste.styles[k]+(room&&S.rooms[room].style===k?0.12:0))*4));const sum=w.reduce((a,b)=>a+b);let r=rnd()*sum;for(let i=0;i<SK.length;i++){r-=w[i];if(r<=0)return SK[i]}return SK[0]}
+function activeDirs(){return S.directives.filter(d=>d.hours>0)}
+function findSpot(room,type){
+  const r=ROOMS[room],t=TYPES[type],m=occMap(),cands=[];
+  for(const rot of (t.w===t.d?[0,1]:[0,1])){
+    const fw=rot?t.d:t.w,fd=rot?t.w:t.d;
+    for(let x=r.x;x<=r.x+r.w-fw;x++)for(let y=r.y;y<=r.y+r.h-fd;y++){
+      if(t.wall){if(rot===0&&y!==r.y)continue;if(rot===1&&x!==r.x)continue}
+      let ok=true;
+      for(let i=0;i<fw&&ok;i++)for(let j=0;j<fd&&ok;j++){const key=(x+i)+','+(y+j);
+        if(t.flat){if(m.has(key)&&m.get(key)===null)ok=false}else{if(m.get(key))ok=false;if(KEEP.has(key))ok=false}}
+      if(!ok)continue;
+      let sc=rnd();
+      if(!t.wall){const cx=r.x+r.w/2-fw/2,cy=r.y+r.h/2-fd/2;sc+=(t.flat?2:0.6)-Math.hypot(x-cx,y-cy)*(t.flat?0.6:0.15)}
+      cands.push({x,y,rot,sc});
+    }
+  }
+  if(!cands.length)return null;cands.sort((a,b)=>b.sc-a.sc);return cands[0];
+}
+function placeItem(type,room,style){
+  const sp=findSpot(room,type);if(!sp)return null;
+  const it={id:'i'+(S.nid++),type,room,x:sp.x,y:sp.y,rot:sp.rot,style,born:S.day};S.items.push(it);S.stats.acts++;dirty();return it;
+}
+function removeItem(it){S.items=S.items.filter(i=>i!==it);if(selected===it)hideCard();dirty()}
+function describe(it){return `${STYLES[it.style].n} ${TYPES[it.type].n}`}
+function decide(){
+  const c=[],dirs=activeDirs(),pref=prefFill();
+  for(const room of RK){
+    const r=ROOMS[room],occ=occupancy(room);
+    const dRoom=dirs.filter(d=>!d.room||d.room===room);
+    for(const type of r.types){
+      const have=countIn(room,type),need=(r.ess[type]||0);
+      if(have>=MAXC[type])continue;
+      let sc,why;
+      if(have<need){sc=3.4+rnd()*0.6;why=`${r.n}에 꼭 필요해서`}
+      else{sc=0.15+tagSum(type)*1.3+(S.taste.types[type]||0)*1.6+rnd()*0.8;why='';
+        if(occ+TYPES[type].w*TYPES[type].d/(r.w*r.h)>pref)sc-=2.4;
+        const types=S.taste.types[type]||0,ts=tagSum(type);
+        if(ts>0.25)why=`요즘 ${TYPES[type].tags.map(t=>TAGS[t]).join('·')} 쪽이 좋다고 배워서`;else if(types>0.2)why=`${TYPES[type].n} 좋아하시는 것 같아서`;}
+      let dsty=null;
+      for(const d of dRoom){if(d.neg)continue;const hit=(d.tags||[]).some(t=>TYPES[type].tags.includes(t))||(d.types||[]).includes(type);if(hit){sc+=2.4;why=`지령 “${d.text}” 따라`}if(d.style)dsty=d.style}
+      for(const d of dRoom){if(!d.neg)continue;const hit=(d.tags||[]).some(t=>TYPES[type].tags.includes(t))||(d.types||[]).includes(type);if(hit)sc-=4}
+      c.push({op:'place',type,room,style:dsty||sampleStyle(room),sc,why});
+    }
+    // 방 톤 바꾸기
+    const rs=S.rooms[room].style;let tgt=topStyle(),gap=S.taste.styles[tgt]-S.taste.styles[rs];
+    const dStyle=dRoom.find(d=>d.style&&!d.neg);if(dStyle&&dStyle.style!==rs){tgt=dStyle.style;gap=Math.max(gap,0.8)}
+    if(tgt!==rs&&gap>0.3)c.push({op:'room',room,style:tgt,sc:gap*1.6+rnd()*0.4-0.2,why:dStyle?`지령 “${dStyle.text}” 따라`:`${STYLES[tgt].n} 쪽을 더 좋아하셔서`});
+  }
+  for(const it of S.items){
+    const r=ROOMS[it.room],ess=(r.ess[it.type]||0)>=countIn(it.room,it.type);
+    const dRoom=dirs.filter(d=>!d.room||d.room===it.room);
+    let tgt=topStyle(),gap=S.taste.styles[tgt]-S.taste.styles[it.style];
+    const dStyle=dRoom.find(d=>d.style&&!d.neg);if(dStyle&&dStyle.style!==it.style){tgt=dStyle.style;gap=Math.max(gap,0.75)}
+    if(tgt!==it.style&&gap>0.3)c.push({op:'restyle',it,style:tgt,sc:gap*1.8+rnd()*0.5-0.1,why:dStyle?`지령 “${dStyle.text}” 따라`:`${STYLES[it.style].n}보다 ${STYLES[tgt].n} 반응이 좋아서`});
+    if(!ess){const occ=occupancy(it.room);let sc=-0.9+rnd()*0.4+Math.max(0,occ-prefFill())*7-(S.taste.types[it.type]||0)*1.5-tagSum(it.type);let why=occ>prefFill()?`${r.n}이 좀 답답해 보여서`:'별로 안 좋아하시는 것 같아서';
+      for(const d of dRoom){if(d.neg&&(((d.tags||[]).some(t=>TYPES[it.type].tags.includes(t)))||(d.types||[]).includes(it.type)||(d.tags||[]).includes('minimal'))){sc+=3;why=`지령 “${d.text}” 따라`}}
+      c.push({op:'remove',it,sc,why})}
+  }
+  c.sort((a,b)=>b.sc-a.sc);return c[0]&&c[0].sc>0.45?c[0]:null;
+}
+function execute(a,src){
+  // src: 'ai' | 'cmd'
+  let text='',act=null,it=null;
+  if(a.op==='place'){it=placeItem(a.type,a.room,a.style);if(!it)return false;text=`${ROOMS[a.room].n}에 ${describe(it)} 하나 들였어요.`;act={itemId:it.id,type:it.type,style:it.style};addPop(it,'+ '+describe(it))}
+  else if(a.op==='restyle'){it=a.it;const old=STYLES[it.style].n;it.style=a.style;text=`${ROOMS[it.room].n} ${TYPES[it.type].n}, ${old}에서 ${STYLES[a.style].n}로 바꿨어요.`;act={itemId:it.id,type:it.type,style:it.style};addPop(it,'↻ '+STYLES[a.style].n);dirty()}
+  else if(a.op==='remove'){it=a.it;text=`${ROOMS[it.room].n} ${describe(it)} 하나 치웠어요.`;act={removed:1,type:it.type,style:it.style};addPop(it,'− '+TYPES[it.type].n);removeItem(it)}
+  else if(a.op==='room'){S.rooms[a.room].style=a.style;text=`${ROOMS[a.room].n} 벽과 바닥, ${STYLES[a.style].n} 톤으로 칠했어요.`;act={room:a.room,style:a.style,type:null};const r=ROOMS[a.room];pops.push({x:HX+r.x+r.w/2,y:HY+r.y+r.h/2,text:'🖌 '+STYLES[a.style].n,born:performance.now()});dirty()}
+  else return false;
+  addLog('ai',text,{why:a.why||'',act,fb:0});
+  return true;
+}
+function aiTick(){const a=decide();if(a)execute(a,'ai')}
+
+// ---------- 학습 ----------
+function learn(act,sign,source){
+  const s=S.taste,k=sign>0?1:1.2;
+  if(act.style)s.styles[act.style]=clamp(s.styles[act.style]+0.13*sign*k,-1,1);
+  if(act.type){s.types[act.type]=clamp((s.types[act.type]||0)+0.2*sign*k,-1,1);
+    TYPES[act.type].tags.forEach(t=>s.tags[t]=clamp(s.tags[t]+0.08*sign*k,-1,1))}
+  S.fbHist.push(sign>0?1:0);if(S.fbHist.length>30)S.fbHist.shift();
+  if(sign>0){S.stats.likes++;S.dayFb.l++}else{S.stats.dislikes++;S.dayFb.d++}
+  const what=act.type?`${STYLES[act.style].n} ${TYPES[act.type].n}`:`${STYLES[act.style].n} 톤`;
+  if(rnd()<0.6||sign<0)addLesson(sign>0?`${what} → 좋아하심. 비슷한 걸 더 시도할 것.`:`${what} → 별로라고 하심. 당분간 피할 것.`);
+  dirty();renderLearn();
+}
+function feedback(entry,sign){
+  if(entry.fb)return;entry.fb=sign;learn(entry.act,sign,'log');
+  if(sign<0){const it=S.items.find(i=>i.id===entry.act.itemId);
+    if(it){addPop(it,'− '+TYPES[it.type].n);removeItem(it);addLog('ai',`알겠어요. ${describe(it)} 치웠어요. 다음엔 덜 고를게요.`)}
+    else if(entry.act.room){addLog('ai',`알겠어요. ${STYLES[entry.act.style].n} 톤은 당분간 안 쓸게요.`)}}
+  else addLog('ai',pick(['좋다니 다행이에요. 기억해 둘게요.','오, 이런 거 좋아하시는구나. 메모!','감 잡았어요. 이 방향으로 더 가볼게요.']));
+  renderLog();
+}
+function applyTaste(t){if(!t)return;
+  for(const k in (t.styles||{}))if(STYLES[k])S.taste.styles[k]=clamp(S.taste.styles[k]+clamp(+t.styles[k]||0,-0.5,0.5),-1,1);
+  for(const k in (t.tags||{}))if(TAGS[k])S.taste.tags[k]=clamp(S.taste.tags[k]+clamp(+t.tags[k]||0,-0.5,0.5),-1,1);
+  for(const k in (t.types||{}))if(TYPES[k])S.taste.types[k]=clamp((S.taste.types[k]||0)+clamp(+t.types[k]||0,-0.5,0.5),-1,1);
+  dirty();renderLearn()}
+
+// ---------- 지령 ----------
+const KW={
+  styles:{modern:/모던|현대|심플|모노/,vintage:/빈티지|앤틱|엔틱|고풍|레트로(?!모던)/,farmhouse:/파머|시골|컨트리|농가|전원/,midcentury:/미드|센추리|60년대|레트로모던/,boho:/보헤미안|보헤|에스닉|자연주의|라탄/},
+  tags:{plant:/식물|화분|초록|그린|숲/,light:/조명|밝|램프|불빛|어두/,books:/책|독서|공부/,cozy:/아늑|포근|따뜻|러그|폭신/,music:/음악|피아노|악기/,minimal:/비워|깔끔|미니멀|정리|여백|단순|휑/},
+  rooms:{living:/거실/,kitchen:/주방|부엌|식당/,bedroom:/침실|안방|방에서 자/,bath:/욕실|화장실|욕조/,study:/서재|작업실|공부방/},
+};
+const TYPE_KW={sofa:/소파|쇼파/,armchair:/안락의자|암체어|1인 의자/,coffee:/커피.?테이블|탁자/,tv:/티비|TV|텔레비/,bookshelf:/책장|선반/,lamp:/램프|스탠드/,plant:/화분|식물/,rug:/러그|카펫|양탄자/,dining:/식탁/,chair:/의자/,counter:/조리대|싱크대/,fridge:/냉장고/,stove:/오븐|레인지|가스/,bed:/침대/,nightstand:/협탁/,wardrobe:/옷장/,desk:/책상/,tub:/욕조/,toilet:/변기/,sink:/세면대/,piano:/피아노/};
+function localParse(text){
+  const neg=/(싫|빼|치워|없애|그만|말고|줄여|버려|별로)/.test(text);
+  const styles=SK.filter(k=>KW.styles[k].test(text)),tags=TK.filter(k=>KW.tags[k].test(text)),rooms=RK.filter(k=>KW.rooms[k].test(text));
+  const types=Object.keys(TYPE_KW).filter(k=>TYPE_KW[k].test(text)&&!(k==='plant'&&tags.includes('plant')&&!/화분/.test(text)));
+  const room=rooms[0]||null;const out={reply:'',actions:[],taste:{styles:{},tags:{},types:{}},directive:null,lesson:''};
+  if(!styles.length&&!tags.length&&!types.length&&!rooms.length){out.reply='음… 아직 그 말은 잘 못 알아들어요. 방 이름, 스타일(모던·빈티지·파머하우스·미드센추리·보헤미안), 가구 이름을 넣어 주세요.';return out}
+  const lightNeg=/어두/.test(text)&&tags.includes('light');
+  const minimal=tags.includes('minimal');
+  styles.forEach(s=>out.taste.styles[s]=neg?-0.35:0.35);
+  tags.forEach(t=>{if(t==='minimal')out.taste.tags.minimal=0.35;else out.taste.tags[t]=(neg&&!lightNeg)?-0.3:0.3});
+  types.forEach(t=>out.taste.types[t]=neg?-0.35:0.3);
+  if(neg){S.items.filter(i=>types.includes(i.type)&&(!room||i.room===room)).slice(0,3).forEach(i=>out.actions.push({op:'remove',id:i.id}))}
+  else types.forEach(t=>{const rr=(room&&ROOMS[room].types.includes(t))?room:RK.find(k=>ROOMS[k].types.includes(t));if(rr)out.actions.push({op:'place',type:t,room:rr,style:styles[0]||topStyle()})});
+  if(styles[0]&&!neg&&(room||/분위기|느낌|스타일|톤|벽|바닥|전체|집/.test(text)))(room?[room]:RK).forEach(r=>out.actions.push({op:'room',room:r,style:styles[0]}));
+  out.directive={text:text.slice(0,24),room,tags:tags.filter(t=>t!=='minimal'||true),types,style:neg?null:(styles[0]||null),neg:neg||minimal,hours:10};
+  const parts=[];if(room)parts.push(ROOMS[room].n);if(styles.length)parts.push(styles.map(s=>STYLES[s].n).join('·'));if(tags.length)parts.push(tags.map(t=>TAGS[t]).join('·'));if(types.length)parts.push(types.map(t=>TYPES[t].n).join('·'));
+  out.reply=neg?`알겠어요. ${parts.join(' ')} 쪽은 줄여 볼게요.`:minimal?`네, ${parts.join(' ')} 쪽으로 덜어내 볼게요.`:`좋아요, ${parts.join(' ')} 쪽으로 가볼게요.`;
+  out.lesson=`지령 “${text.slice(0,30)}” → ${neg?'싫어함':'원함'}: ${parts.join(', ')}`;
+  return out;
+}
+let sample=null,brainOn=false,busy=false,ctl=null;
+function buildPrompt(text){
+  const items=S.items.map(i=>({id:i.id,type:i.type,room:i.room,style:i.style}));
+  const r3=o=>Object.fromEntries(Object.entries(o).map(([k,v])=>[k,Math.round(v*100)/100]));
+  return `너는 '어항 하우스'라는 관찰형 게임 속 인테리어 디자이너 AI다. 미국식 단독주택을 스스로 꾸미고, 플레이어의 지령과 피드백으로 플레이어 취향을 계속 학습한다.
+
+방(키:이름:놓을 수 있는 가구): ${RK.map(k=>`${k}:${ROOMS[k].n}:${ROOMS[k].types.join(',')}`).join(' / ')}
+가구(키:이름): ${Object.keys(TYPES).map(k=>`${k}:${TYPES[k].n}`).join(', ')}
+스타일(키:이름): ${SK.map(k=>`${k}:${STYLES[k].n}`).join(', ')}
+요소 태그: ${TK.map(k=>`${k}:${TAGS[k]}`).join(', ')}
+방별 최대 개수: ${JSON.stringify(MAXC)}
+
+현재 가구: ${JSON.stringify(items)}
+방 벽·바닥 스타일: ${JSON.stringify(Object.fromEntries(RK.map(k=>[k,S.rooms[k].style])))}
+학습된 취향(-1~1): 스타일 ${JSON.stringify(r3(S.taste.styles))}, 요소 ${JSON.stringify(r3(S.taste.tags))}, 가구 ${JSON.stringify(r3(S.taste.types))}
+최근 배운 것:
+${S.lessons.slice(0,10).map(l=>'- '+l.text).join('\n')||'- (아직 없음)'}
+
+플레이어 지령: "${text.replace(/"/g,"'")}"
+
+아래 형식의 JSON 하나만 답하라:
+{"reply":"디자이너 말투 한국어 1~2문장","actions":[{"op":"place","type":"sofa","room":"living","style":"boho"},{"op":"remove","id":"i3"},{"op":"restyle","id":"i5","style":"modern"},{"op":"room","room":"living","style":"vintage"}],"taste":{"styles":{"boho":0.3},"tags":{"plant":0.2},"types":{"sofa":0.1}},"directive":{"text":"지령 요약 12자 이내","room":"living 또는 null","tags":["plant"],"types":[],"style":"boho 또는 null","neg":false,"hours":10},"lesson":"이번에 플레이어 취향에 대해 배운 한 문장"}
+
+규칙: actions는 0~6개. place는 그 방에 허용된 가구만, 최대 개수를 넘기지 말 것. remove/restyle은 현재 가구의 id만. taste 값은 -0.5~0.5 사이의 변화량이며 지령에 드러난 취향만 반영. 지령이 앞으로 며칠 계속 유지될 방향이면 directive를 채우고(neg=true는 줄이라는 뜻), 단발성이면 null. 지령이 모호하면 학습된 취향에 맞춰 해석하라.`;
+}
+function sanitize(r){
+  const out={reply:String(r&&r.reply||'').slice(0,200),actions:[],taste:r&&r.taste||null,directive:null,lesson:String(r&&r.lesson||'').slice(0,140)};
+  for(const a of (Array.isArray(r&&r.actions)?r.actions:[]).slice(0,6)){
+    if(a.op==='place'&&TYPES[a.type]){let room=ROOMS[a.room]&&ROOMS[a.room].types.includes(a.type)?a.room:RK.find(k=>ROOMS[k].types.includes(a.type));out.actions.push({op:'place',type:a.type,room,style:STYLES[a.style]?a.style:topStyle()})}
+    else if((a.op==='remove'||a.op==='restyle')&&typeof a.id==='string')out.actions.push({op:a.op,id:a.id,style:STYLES[a.style]?a.style:null});
+    else if(a.op==='room'&&ROOMS[a.room]&&STYLES[a.style])out.actions.push(a);
+  }
+  const d=r&&r.directive;if(d&&typeof d==='object'&&d.text){out.directive={text:String(d.text).slice(0,24),room:ROOMS[d.room]?d.room:null,tags:(d.tags||[]).filter(t=>TAGS[t]),types:(d.types||[]).filter(t=>TYPES[t]),style:STYLES[d.style]?d.style:null,neg:!!d.neg,hours:clamp(+d.hours||10,2,48)}}
+  return out;
+}
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+async function applyPlan(plan){
+  applyTaste(plan.taste);
+  if(plan.directive){S.directives=S.directives.filter(d=>d.hours>0).slice(-3);S.directives.push(plan.directive)}
+  if(plan.lesson)addLesson(plan.lesson);
+  addLog('ai',plan.reply||'알겠어요.');
+  for(const a of plan.actions){await sleep(500);
+    if(a.op==='place')execute({...a,why:'지령'},'cmd');
+    else if(a.op==='room')execute({...a,why:'지령'},'cmd');
+    else{const it=S.items.find(i=>i.id===a.id);if(!it)continue;if(a.op==='remove')execute({op:'remove',it,why:'지령'},'cmd');else if(a.style&&a.style!==it.style)execute({op:'restyle',it,style:a.style,why:'지령'},'cmd')}}
+  dirty();
+}
+const statusEl=document.getElementById('status');
+async function command(text){
+  text=text.trim();if(!text||busy)return;
+  addLog('you',text);S.stats.cmds++;
+  if(brainOn&&sample){
+    busy=true;setBusy(true);statusEl.textContent='디자이너가 지령을 곱씹는 중…';ctl=new AbortController();
+    try{const r=await sample.json(buildPrompt(text),{modelTier:'quick',cache:false,signal:ctl.signal});statusEl.textContent='';await applyPlan(sanitize(r))}
+    catch(e){const code=e&&e.code;
+      if(['not_granted','sampling_disabled','not_declared','capability_disabled','capability_removed'].includes(code)){brainOn=false;setBrain();statusEl.textContent='Claude 두뇌를 쓸 수 없어 기본 두뇌로 처리했어요.'}
+      else if(code==='rate_limited')statusEl.textContent='요청이 많아 잠시 쉬어야 해요. 이번 지령은 기본 두뇌로 처리했어요.';
+      else if(code==='cancelled')statusEl.textContent='';
+      else statusEl.textContent='연결이 잠깐 끊겨 기본 두뇌로 처리했어요.';
+      if(code!=='cancelled')await applyPlan(localParse(text));}
+    finally{busy=false;setBusy(false)}
+  }else{await applyPlan(localParse(text))}
+}
+function setBusy(b){document.getElementById('cmdBtn').disabled=b;document.getElementById('cmd').disabled=b}
+function setBrain(){document.getElementById('brainDot').classList.toggle('on',brainOn);document.getElementById('brainTxt').textContent=brainOn?'두뇌: Claude (지령을 자유롭게 해석)':'두뇌: 기본 학습기 (키워드 지령)'}
+
+// ---------- 시간·사건 ----------
+let speed=1;
+const REMARKS=[
+  ()=>{const h=S.min/60;if(h<18)return null;const r=pick(RK);if(S.items.some(i=>i.room===r&&TYPES[i.type].light))return null;return {t:`${ROOMS[r].n} 너무 어두워.`,dir:{text:`${ROOMS[r].n} 조명`,room:r,tags:['light'],types:[],style:null,neg:false,hours:8}}},
+  ()=>S.items.some(i=>i.type==='plant')?null:{t:'집에 초록색이 하나도 없네.',dir:{text:'식물 좀',room:null,tags:['plant'],types:[],style:null,neg:false,hours:6}},
+  ()=>{const r=RK.find(k=>occupancy(k)>prefFill()+0.12);return r?{t:`${ROOMS[r].n} 좀 답답해.`,dir:{text:`${ROOMS[r].n} 정리`,room:r,tags:['minimal'],types:[],style:null,neg:true,hours:6}}:null},
+  ()=>{const it=S.items.length?pick(S.items):null;return it?{t:`이 ${TYPES[it.type].n} 맘에 들어.`}:null},
+  ()=>({t:pick(['오늘 저녁 뭐 먹지?','버디 산책 시켜야겠다.','이웃집 잔디 진짜 잘 깎았더라.','주말에 바비큐 할까?'])}),
+];
+const EVENTS=[
+  ()=>{const t=pick(['armchair','lamp','plant','bookshelf','rug']),s=pick(SK);const r=RK.find(k=>ROOMS[k].types.includes(t)&&countIn(k,t)<MAXC[t]&&findSpot(k,t));if(!r)return;
+    const it=placeItem(t,r,s);if(it){addPop(it,'📦 '+describe(it));addLog('event',`옆집 밀러 부인이 쓰던 ${describe(it)}을(를) 놓고 갔어요. ${ROOMS[r].n}에 두었어요.`,{act:{itemId:it.id,type:t,style:s},fb:0})}},
+  ()=>{if(!S.items.length)return;const it=pick(S.items);addLog('event',`${ROOMS[it.room].n} ${TYPES[it.type].n}이(가) 낡아 보인다는 말이 나왔어요.`);S.directives.push({text:`${TYPES[it.type].n} 교체`,room:it.room,tags:[],types:[it.type],style:null,neg:false,hours:4});const tgt=topStyle();if(tgt!==it.style){it.style=tgt;addPop(it,'↻ '+STYLES[tgt].n);addLog('ai',`${TYPES[it.type].n}, ${STYLES[tgt].n}로 새로 바꿨어요.`,{act:{itemId:it.id,type:it.type,style:tgt},fb:0});dirty()}},
+  ()=>{addLog('event','쌀쌀해졌어요. 다들 담요를 찾네요.');S.taste.tags.cozy=clamp(S.taste.tags.cozy+0.05,-1,1)},
+  ()=>{addLog('event','주말 홈파티 예정. 손님이 온대요.');S.directives.push({text:'손님맞이',room:'living',tags:['cozy','light'],types:['armchair'],style:null,neg:false,hours:8})},
+];
+function hourTick(h){
+  S.directives.forEach(d=>d.hours--);S.directives=S.directives.filter(d=>d.hours>0);
+  if(h>=8&&h<=22)aiTick();
+  if(h>=7&&h<=23&&rnd()<0.33){const f=pick(REMARKS)();if(f){const p=pick(PEOPLE.filter(p=>!p.dog));p.say=f.t;p.until=performance.now()+4200;addLog('talk',`${p.name}: “${f.t}”`);if(f.dir){S.directives.push(f.dir)}}}
+  if(h===10&&rnd()<0.65)pick(EVENTS)();
+  if(h===22){const {l,d}=S.dayFb;const ts=topStyle();
+    addLesson(`${S.day}일차 회고 — 좋아 ${l}, 별로 ${d}. 지금은 ${STYLES[ts].n} 쪽을 가장 믿고 있어요.`);
+    if(S.fbHist.length)S.agree.push({day:S.day,pct:Math.round(100*S.fbHist.reduce((a,b)=>a+b,0)/S.fbHist.length)});if(S.agree.length>60)S.agree.shift();
+    S.dayFb={l:0,d:0}}
+  dirty();
+}
+function advance(dt){
+  if(!speed)return;const mins=dt*6*speed;const before=S.min;S.min+=mins;
+  if(Math.floor(S.min/60)!==Math.floor(before/60)){if(S.min>=1440){S.min-=1440;S.day++;addLog('event',`${S.day}일차 아침이 밝았어요.`)}hourTick(Math.floor(S.min/60))}
+}
+function updateClock(){const h=Math.floor(S.min/60),m=Math.floor(S.min%60/10)*10;document.getElementById('clock').textContent=`${S.day}일차 ${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`}
+
+// ---------- 화면 패널 ----------
+const logEl=document.getElementById('log');
+const KIND={ai:'디자이너',you:'나의 지령',event:'사건',talk:'주민'};
+let logQueued=false;
+function renderLog(){if(logQueued)return;logQueued=true;requestAnimationFrame(()=>{logQueued=false;
+  logEl.textContent='';const fbOpen=new Set(S.log.filter(e=>e.act&&!e.fb&&!e.act.removed).slice(0,10).map(e=>e.id));
+  for(const e of S.log.slice(0,80)){const li=document.createElement('li');
+    const t=document.createElement('div');t.className='t';t.textContent=e.t;li.append(t);
+    const body=document.createElement('div');const k=document.createElement('span');k.className='k '+e.kind;k.textContent=KIND[e.kind]||'';body.append(k,document.createTextNode(e.text));
+    if(e.why){const w=document.createElement('div');w.className='why';w.textContent=e.why;body.append(w)}
+    if(e.act&&!e.act.removed){if(e.fb){const r=document.createElement('div');r.className='rated';r.textContent=e.fb>0?'좋아라고 가르침':'별로라고 가르침';body.append(r)}
+      else if(fbOpen.has(e.id)){const fb=document.createElement('div');fb.className='fb';const a=document.createElement('button');a.className='btn primary';a.textContent='좋아';a.onclick=()=>feedback(e,1);
+        const b=document.createElement('button');b.className='btn warn';b.textContent='별로';b.onclick=()=>feedback(e,-1);fb.append(a,b);body.append(fb)}}
+    li.append(body);logEl.append(li)}
+})}
+function bars(el,keys,names,obj){el.textContent='';for(const k of keys){const v=obj[k]||0;const row=document.createElement('div');row.className='bar';
+  const n=document.createElement('span');n.textContent=names[k];const tr=document.createElement('div');tr.className='track';const f=document.createElement('div');f.className='fill';
+  f.style.left=(v>=0?50:50+v*50)+'%';f.style.width=Math.abs(v)*50+'%';f.style.background=v>=0?'var(--lawn)':'var(--flag)';tr.append(f);
+  const nm=document.createElement('span');nm.className='num';nm.textContent=(v>0?'+':'')+v.toFixed(2);row.append(n,tr,nm);el.append(row)}}
+function renderLearn(){
+  const fh=S.fbHist,pct=fh.length?Math.round(100*fh.reduce((a,b)=>a+b,0)/fh.length):null;
+  const st=document.getElementById('stats');st.innerHTML='';
+  [[pct==null?'—':pct+'%','취향 일치도'],[S.stats.likes+S.stats.dislikes,'피드백 수'],[S.stats.cmds,'지령 수']].forEach(([b,s])=>{const d=document.createElement('div');d.className='stat';const bb=document.createElement('b');bb.textContent=b;const ss=document.createElement('span');ss.textContent=s;d.append(bb,ss);st.append(d)});
+  bars(document.getElementById('styleBars'),SK,Object.fromEntries(SK.map(k=>[k,STYLES[k].n])),S.taste.styles);
+  bars(document.getElementById('tagBars'),TK,TAGS,S.taste.tags);
+  const ol=document.getElementById('lessons');ol.textContent='';
+  if(!S.lessons.length){const li=document.createElement('li');li.textContent='아직 배운 게 없어요. 지령을 내리거나 일지에서 좋아·별로를 눌러 주세요.';ol.append(li)}
+  for(const l of S.lessons.slice(0,20)){const li=document.createElement('li');const d=document.createElement('span');d.className='d';d.textContent=l.d+' ';li.append(d,document.createTextNode(l.text));ol.append(li)}
+  const sv=document.getElementById('spark');const a=S.agree;
+  if(a.length<2){sv.innerHTML='<text x="0" y="28" font-size="12" fill="currentColor" opacity=".6">하루가 지날 때마다 기록돼요 (밤 10시 회고)</text>';sv.style.color='var(--muted)'}
+  else{const pts=a.map((p,i)=>[i/(a.length-1)*296+2,44-p.pct/100*40]);
+    sv.innerHTML=`<line x1="0" x2="300" y1="24" y2="24" stroke="var(--line)" stroke-dasharray="3 3"/><polygon points="2,44 ${pts.map(p=>p.join(',')).join(' ')} 298,44" fill="var(--lawn-soft)"/><polyline points="${pts.map(p=>p.join(',')).join(' ')}" fill="none" stroke="var(--lawn)" stroke-width="2" vector-effect="non-scaling-stroke"/><circle cx="${pts.at(-1)[0]}" cy="${pts.at(-1)[1]}" r="3" fill="var(--lawn)"/>`}
+  document.getElementById('saveTxt').textContent=saveMode;
+}
+
+// ---------- 입력 ----------
+const card=document.getElementById('card');
+function showCard(it){selected=it;document.getElementById('cardName').textContent=describe(it);document.getElementById('cardMeta').textContent=`${ROOMS[it.room].n} · ${it.born}일차에 들어옴`;card.hidden=false}
+function hideCard(){selected=null;card.hidden=true}
+document.getElementById('cardClose').onclick=hideCard;
+document.getElementById('cardLike').onclick=()=>{if(!selected)return;learn({type:selected.type,style:selected.style},1);addLog('you',`${describe(selected)} 좋아.`);addPop(selected,'♥');hideCard()};
+document.getElementById('cardNo').onclick=()=>{if(!selected)return;const it=selected;learn({type:it.type,style:it.style},-1);addLog('you',`${describe(it)} 별로.`);addPop(it,'− '+TYPES[it.type].n);removeItem(it);addLog('ai',`치웠어요. ${STYLES[it.style].n} ${TYPES[it.type].n}은 덜 고를게요.`)};
+function hit(sx,sy){
+  let best=null,bk=-1e9;
+  for(const z of [0,0.35,0.7,1.05,1.4]){const a=(sx-OX)/(TW/2),b=(sy-OY+z*ZH)/(TW/4);const wx=(a+b)/2-HX,wy=(b-a)/2-HY;
+    for(const it of S.items){const[fw,fd]=fp(it);const t=TYPES[it.type];if(wx>=it.x&&wx<it.x+fw&&wy>=it.y&&wy<it.y+fd&&t.h+0.1>=z){const k=it.x+it.y+(t.flat?-50:0);if(k>bk){bk=k;best=it}}}}
+  return best;
+}
+let drag=null;
+cv.addEventListener('pointerdown',e=>{drag={x:e.clientX,y:e.clientY,px:panX,py:panY,moved:false};cv.setPointerCapture(e.pointerId)});
+cv.addEventListener('pointermove',e=>{if(!drag)return;const dx=e.clientX-drag.x,dy=e.clientY-drag.y;if(Math.hypot(dx,dy)>6)drag.moved=true;if(drag.moved){panX=clamp(drag.px+dx,-CW*zoom*0.5,CW*zoom*0.5);panY=clamp(drag.py+dy,-CH*zoom*0.5,CH*zoom*0.5)}});
+cv.addEventListener('pointerup',e=>{if(drag&&!drag.moved){const r=cv.getBoundingClientRect();const it=hit(e.clientX-r.left,e.clientY-r.top);if(it)showCard(it);else hideCard()}drag=null});
+cv.addEventListener('pointercancel',()=>drag=null);
+const ZL=[0.85,1.15,1.6,2.2];
+document.getElementById('zIn').onclick=()=>{const i=ZL.indexOf(zoom);zoom=ZL[Math.min(ZL.length-1,(i<0?1:i)+1)]};
+document.getElementById('zOut').onclick=()=>{const i=ZL.indexOf(zoom);zoom=ZL[Math.max(0,(i<0?1:i)-1)];if(zoom<=1.15){panX=panY=0}};
+const spBtns={0:document.getElementById('sp0'),1:document.getElementById('sp1'),4:document.getElementById('sp3')};
+for(const k in spBtns)spBtns[k].onclick=()=>{speed=+k;for(const j in spBtns)spBtns[j].setAttribute('aria-pressed',String(+j===speed))};
+document.getElementById('cmdForm').addEventListener('submit',e=>{e.preventDefault();const i=document.getElementById('cmd');const v=i.value;i.value='';command(v)});
+const CHIPS=['집 전체를 보헤미안 느낌으로','침실을 좀 밝게','거실 좀 비워줘','피아노 하나 들여놔','식물 많은 게 좋아','빈티지는 싫어'];
+const chipsEl=document.getElementById('chips');CHIPS.forEach(c=>{const b=document.createElement('button');b.type='button';b.className='chipbtn';b.textContent=c;b.onclick=()=>command(c);chipsEl.append(b)});
+const tabs=[['tabLog','paneLog'],['tabLearn','paneLearn']];
+tabs.forEach(([t,p])=>document.getElementById(t).onclick=()=>{tabs.forEach(([t2,p2])=>{document.getElementById(t2).setAttribute('aria-selected',String(t2===t));document.getElementById(p2).hidden=t2!==t});if(t==='tabLearn')renderLearn()});
+let resetArm=0;const rb=document.getElementById('resetBtn');
+rb.onclick=()=>{if(Date.now()-resetArm<4000){S=freshState();hideCard();intro();dirty();saveNow();renderLog();renderLearn();rb.textContent='새 집에서 다시 시작';resetArm=0}else{resetArm=Date.now();rb.textContent='한 번 더 누르면 초기화돼요';setTimeout(()=>{if(Date.now()-resetArm>=3900)rb.textContent='새 집에서 다시 시작'},4000)}};
+
+function intro(){addLog('event',`디자이너 AI가 입주했어요. 원래는 ${STYLES[S.fav].n} 스타일을 좋아하는 편이래요. 지령과 좋아·별로로 당신 취향을 가르쳐 주세요.`)}
+if(!local)intro();
+
+// ---------- 루프 ----------
+let last=performance.now(),frameN=0;
+function frame(now){const dt=Math.min(0.1,(now-last)/1000);last=now;
+  if(frameN++%90===0)readCss();
+  advance(dt);stepPeople(dt*(speed?Math.max(1,speed*0.6):0.3));
+  draw(now);updateClock();
+  if(isDirty&&now-lastSave>6000)saveNow();
+  requestAnimationFrame(frame)}
+readCss();resize();renderLog();renderLearn();setBrain();
+requestAnimationFrame(frame);
+document.addEventListener('visibilitychange',()=>{if(document.hidden){isDirty=true;saveNow()}});
+
+// ---------- 플랫폼 연결 ----------
+(async()=>{
+  if(!window.claude||!window.claude.use){document.getElementById('brainTxt').textContent='두뇌: 기본 학습기 (키워드 지령)';return}
+  claude.use('sample').then(s=>{sample=s;brainOn=!!s;setBrain()}).catch(()=>{setBrain()});
+  try{const [d,u]=await Promise.all([claude.use('db'),claude.use('user')]);
+    if(d&&u){const id=await u.id();if(id){db=d;uid=id;saveMode='계정에 저장 중 (다른 기기에서도 이어서)';
+      const snap=await db.doc('data/users/'+uid+'/save').get();
+      if(snap.exists){try{const o=JSON.parse(snap.data().json);if(valid(o)&&(o.savedAt||0)>(S.savedAt||0)){S=o;hideCard();renderLog()}}catch(e){}}
+      else{isDirty=true;saveNow()}
+    }}
+  }catch(e){}
+  renderLearn();
+})();
+})();
+</script>
+
+</body></html>

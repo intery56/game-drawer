@@ -1,0 +1,767 @@
+<!doctype html><html><head><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script><script src="../assets/config.js"></script><script src="../assets/member.js" data-game="sealed-7days"></script><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>밀실 7일</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Sans+KR:wght@400;500;600&family=Nanum+Gothic+Coding:wght@400;700&display=swap">
+<style>
+/* 레이아웃: 형광등 아래 콘크리트 방. 위 시계·사람 6명, 가운데 관찰 기록, 아래 행동 바. 쪽지만 종이색. */
+:root{
+  --bg:#121412; --wall:#1a1d1a; --wall2:#232723; --line:#30362f;
+  --fg:#d9ddd3; --muted:#868d83; --lamp:#cdd8b6;
+  --paper:#e6dcc2; --ink:#3b3327; --rust:#c56b4d; --calm:#8fae8a; --warn:#c9a55a;
+  --f-story:"Gowun Batang","Nanum Myeongjo",serif;
+  --f-ui:"IBM Plex Sans KR","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  --f-mono:"Nanum Gothic Coding","D2Coding",ui-monospace,monospace;
+  color-scheme:dark;
+}
+html,body{height:100%}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-ui);font-size:15px;line-height:1.6}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--lamp);outline-offset:2px}
+b{font-weight:700;color:var(--lamp)}
+#app{height:100%;display:flex;flex-direction:column;max-width:760px;margin:0 auto;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+header{padding-block:12px 10px;display:flex;flex-direction:column;gap:8px;border-bottom:1px solid var(--line)}
+.top{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+.clock{font-family:var(--f-mono);color:var(--lamp);font-size:20px;letter-spacing:.02em;font-weight:700}
+.clock.fuzzy{animation:flick 6s infinite}
+@keyframes flick{0%,92%,100%{opacity:1}93%{opacity:.35}95%{opacity:.9}96%{opacity:.4}}
+.meta{display:flex;gap:14px;font-size:12px;color:var(--muted);font-family:var(--f-mono)}
+.meta strong{color:var(--fg)}
+.ticks{display:grid;grid-template-columns:repeat(42,1fr);gap:2px}
+.ticks i{height:4px;background:var(--wall2);border-radius:1px}
+.ticks i.done{background:var(--muted)}
+.ticks i.now{background:var(--lamp)}
+.ticks i.blur{filter:blur(1px);opacity:.6}
+.room{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;padding-block:10px}
+.p{background:var(--wall);border:1px solid var(--line);border-radius:6px;padding:7px 9px;text-align:left;display:flex;flex-direction:column;gap:2px;min-width:0}
+.p .nm{font-weight:600;font-size:14px;display:flex;justify-content:space-between;gap:4px}
+.p .jb{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.p .md{font-size:11px;display:flex;align-items:center;gap:5px}
+.dot{width:7px;height:7px;border-radius:50%;flex:none}
+.bar{height:3px;background:var(--wall2);border-radius:2px;overflow:hidden;margin-top:3px}
+.bar span{display:block;height:100%;background:var(--warn)}
+.p.dead{opacity:.4}.p.dead .nm span:first-child{text-decoration:line-through}
+.p.iso{border-style:dashed}
+.feed{flex:1;overflow-y:auto;padding-block:6px 18px;display:flex;flex-direction:column;gap:14px;min-height:0;overscroll-behavior:contain}
+.sc{display:flex;flex-direction:column;gap:4px;max-width:62ch}
+.sc .st{font-family:var(--f-mono);font-size:11px;color:var(--muted);letter-spacing:.04em}
+.sc p{margin:0;font-family:var(--f-story);font-size:16.5px;line-height:1.85}
+.sc.dim p{color:#a7ad9f}
+.sc.dim{padding-left:10px;border-left:2px solid var(--line)}
+.sc.note p{color:var(--paper)}
+.sc.alarm p{color:#e3b7a7}
+.sc.new{animation:in .5s ease-out}
+@keyframes in{from{opacity:.2;transform:translateY(4px)}to{opacity:1;transform:none}}
+.sep{font-family:var(--f-mono);font-size:11px;color:var(--muted);display:flex;align-items:center;gap:10px}
+.sep::before,.sep::after{content:"";flex:1;height:1px;background:var(--line)}
+footer{display:flex;gap:8px;padding-block:10px calc(10px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--line)}
+.btn{border:1px solid var(--line);background:var(--wall);border-radius:8px;padding:12px 14px;font-weight:500}
+.btn.go{flex:1;background:var(--lamp);color:#151812;border-color:var(--lamp);font-weight:600}
+.btn.go.pass{background:var(--wall2);color:var(--lamp);border-color:var(--lamp)}
+.btn.paper{background:var(--paper);color:var(--ink);border-color:var(--paper)}
+.btn:disabled{opacity:.35;cursor:default}
+/* overlays */
+.ov{position:fixed;inset:0;background:color-mix(in srgb,var(--bg) 88%,transparent);z-index:20;display:flex;align-items:flex-end;justify-content:center;
+  padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) 0 max(16px,env(safe-area-inset-left,0px))}
+.panel{background:var(--wall);border:1px solid var(--line);border-radius:12px 12px 0 0;width:100%;max-width:640px;max-height:88vh;overflow-y:auto;
+  padding:20px 18px calc(20px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:14px}
+.panel h2{margin:0;font-family:var(--f-story);font-size:24px;text-wrap:balance}
+.panel h3{margin:0;font-size:12px;letter-spacing:.08em;color:var(--muted);font-weight:500}
+.panel p{margin:0}
+.lbl{font-size:12px;color:var(--muted);letter-spacing:.06em}
+.file{background:var(--paper);color:var(--ink);border-radius:4px;padding:10px 12px;font-family:var(--f-story);font-size:15px}
+.file .tag{font-family:var(--f-mono);font-size:11px;letter-spacing:.06em;display:block;margin-bottom:4px;opacity:.75}
+.stat{display:grid;grid-template-columns:5em 1fr 4.5em;align-items:center;gap:8px;font-size:13px}
+.stat .bar{height:6px;margin:0}
+.stat .v{text-align:right;color:var(--muted);font-family:var(--f-mono);font-size:12px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:1px solid var(--line);background:var(--wall2);border-radius:999px;padding:7px 13px;font-size:14px}
+.chip[aria-pressed="true"]{background:var(--paper);color:var(--ink);border-color:var(--paper);font-weight:600}
+.opts{display:flex;flex-direction:column;gap:6px}
+.opt{border:1px solid var(--line);background:var(--wall2);border-radius:8px;padding:10px 12px;text-align:left;display:flex;flex-direction:column;gap:2px}
+.opt small{color:var(--muted);font-size:12px}
+.opt[aria-pressed="true"]{border-color:var(--paper);box-shadow:inset 3px 0 0 var(--paper)}
+.slip{background:var(--paper);color:var(--ink);font-family:var(--f-story);font-size:17px;padding:16px 18px;border-radius:2px;transform:rotate(-.6deg);box-shadow:0 6px 18px rgba(0,0,0,.4);min-height:3.5em}
+.row{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+/* intro + ending */
+.full{position:fixed;inset:0;z-index:30;background:var(--bg);overflow-y:auto;
+  padding:calc(28px + env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) calc(28px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.full .in{max-width:600px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+.title{font-family:var(--f-story);font-size:clamp(48px,14vw,84px);line-height:1;margin:0;letter-spacing:-.02em;color:var(--lamp)}
+.title small{display:block;font-family:var(--f-mono);font-size:13px;letter-spacing:.2em;color:var(--muted);margin-top:12px}
+.lead{font-family:var(--f-story);font-size:17px;line-height:1.9;max-width:36em}
+.rules{display:flex;flex-direction:column;gap:8px;font-size:14px;color:var(--muted);padding:0;margin:0;list-style:none}
+.rules li{display:grid;grid-template-columns:5.5em 1fr;gap:8px}
+.rules li span{color:var(--fg);font-weight:500}
+.cast{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.cast div{border-top:1px solid var(--line);padding-top:6px;font-size:13px;color:var(--muted)}
+.cast div strong{display:block;color:var(--fg);font-size:15px}
+.ep{display:flex;flex-direction:column;gap:14px}
+.ep article{border-top:1px solid var(--line);padding-top:12px;display:flex;flex-direction:column;gap:6px}
+.ep .who{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.ep .who strong{font-size:17px}
+.ep .fate{font-family:var(--f-mono);font-size:11px;letter-spacing:.06em;color:var(--muted)}
+.ep .fate.x{color:var(--rust)}
+.ep p{margin:0;font-family:var(--f-story);font-size:16px;line-height:1.85}
+.ep .rel{font-size:12px;color:var(--muted)}
+.tl{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.tl li{display:grid;grid-template-columns:6.5em 1fr;gap:10px;font-size:14px}
+.tl li span{font-family:var(--f-mono);font-size:11px;color:var(--muted);padding-top:3px}
+.tl li.n{color:var(--paper)}
+.endt{font-family:var(--f-story);font-size:clamp(38px,11vw,60px);margin:0;color:var(--lamp);line-height:1.1}
+@media (min-width:640px){.room{grid-template-columns:repeat(6,minmax(0,1fr))}.ov{align-items:center}.panel{border-radius:12px;padding-bottom:20px}}
+@media (prefers-reduced-motion:reduce){.clock.fuzzy,.sc.new{animation:none}}
+</style>
+
+<div id="app">
+  <header>
+    <div class="top">
+      <div class="clock" id="clk">1일째 · 새벽</div>
+      <div class="meta"><span>배급함 <strong id="m-stash">0</strong></span><span>쪽지 <strong id="m-note">1</strong></span></div>
+    </div>
+    <div class="ticks" id="ticks" aria-label="진행도"></div>
+  </header>
+  <section class="room" id="room" aria-label="밀실 안의 사람들"></section>
+  <main class="feed" id="feed" aria-live="polite"></main>
+  <footer>
+    <button class="btn paper" id="b-note">쪽지 쓰기</button>
+    <button class="btn go" id="b-go">계속 지켜보기</button>
+  </footer>
+</div>
+
+<div class="full" id="intro">
+  <div class="in">
+    <h1 class="title">밀실 7일<small>OBSERVATION · 42 SEGMENTS</small></h1>
+    <p class="lead">창문 없는 콘크리트 방, 형광등 네 개, 철문 하나. 서로 모르는 여섯 명이 이곳에서 눈을 뜬다. 식량은 철문 아래 투입구로만 들어오고, 늘 조금씩 모자란다. 당신은 벽 너머에서 이들을 지켜보는 관찰자다.</p>
+    <ul class="rules">
+      <li><span>시간</span>하루는 새벽·아침·낮·오후·저녁·밤 여섯 구간. 7일, 42구간. 당신이 넘기지 않으면 시간은 흐르지 않는다.</li>
+      <li><span>관찰</span>사람을 누르면 상태와 참가자 파일, 누구를 믿고 경계하는지 볼 수 있다.</li>
+      <li><span>쪽지</span>하루에 딱 한 장. 투입구로 한 사람에게 몰래 보낸다. 의심, 비밀, 거짓 경고, 위로, 지시.</li>
+      <li><span>시계</span>4일째부터 배급이 불규칙해진다. 방 안의 사람들도, 당신도 날짜가 흐려진다.</li>
+    </ul>
+    <div class="cast" id="cast"></div>
+    <div class="row" style="justify-content:flex-start">
+      <button class="btn go" id="b-start" style="flex:none">관찰 시작</button>
+      <button class="btn" id="b-cont" hidden>이어서 지켜보기</button>
+    </div>
+  </div>
+</div>
+
+<div class="ov" id="sheet" hidden><div class="panel" id="sheet-in" role="dialog" aria-modal="true"></div></div>
+<div class="ov" id="notebox" hidden><div class="panel" id="note-in" role="dialog" aria-modal="true"></div></div>
+<div class="full" id="ending" hidden><div class="in" id="end-in"></div></div>
+
+<script>
+const P=['새벽','아침','낮','오후','저녁','밤'];
+const NP=[
+ {name:'서진',full:'한서진',age:47,job:'전직 간호사',policy:'need',bonus:8,
+  trait:'침착하고 위기에 강하다. 그만큼 통제욕이 세서, 사람들이 자기 말을 따르지 않으면 견디지 못한다.',
+  secret:'12년 전 병원 투약 사고를 후배 탓으로 돌리고 그만뒀다.',
+  expose:'이 사람, 병원에서 사고 내고 후배한테 덮어씌운 사람이에요. 다 알아요.',
+  confess:'…저 간호사 그만둔 거, 제 발로 나온 게 아니에요. 투약 사고가 있었어요. 그걸 후배 탓으로 돌렸어요.',
+  lines:{calm:['물은 한 번에 많이 마시지 마세요. 조금씩, 나눠서.','손 줘봐요. 맥박 한번 볼게요.','다들 잠은 꼭 자요. 버티는 데는 그게 제일이에요.'],
+   tense:['제 말대로만 하면 아무도 안 쓰러져요. 그러니까 좀 따라요.','누가 또 배급함 건드렸어요?','아픈 사람 먼저라고 했잖아요. 몇 번을 말해요.'],
+   broken:['…제 책임이 아니었어요. 아니었다고요.','손이 왜 이렇게 떨리지.','다 내 탓이라고 하겠지. 또.']},
+  acts:['서진이 사람들의 안색을 하나씩 살핀다.','서진이 물병에 손톱으로 눈금을 새긴다. 어제보다 한 칸 내려갔다.','서진이 누군가의 이마에 손을 대 본다.']},
+ {name:'도윤',full:'박도윤',age:24,job:'배달 기사',policy:'self',bonus:0,
+  trait:'눈치가 빠르고 생존 본능이 강하다. 손해 보는 걸 못 참고, 자기 몫은 꼭 챙긴다.',
+  secret:'이 건물에 배달 온 적이 있다. 철문 잠금장치가 어떻게 생겼는지 안다.',
+  expose:'너 여기 와본 적 있지? 문이 어떻게 잠기는지 안다며. 왜 말 안 했어?',
+  confess:'저 이 건물 알아요. 배달 왔었어요. 문 잠금장치… 대충 어떻게 생겼는지 알아요.',
+  lines:{calm:['환기구 소리 들려요? 저거 바깥이랑 이어져 있을 거예요.','배달하면 하루에 계단 이천 개 올라요. 이 정도는 버텨요.','나가면 국밥부터 먹을 거예요. 곱빼기로.'],
+   tense:['누가 제 가방 열었어요?','줄 서서 받을 거면 저 먼저요. 어제 제가 덜 받았잖아요.','저 사람들 믿지 마요. 다 자기 생각만 해요.'],
+   broken:['콜 울리는 소리가 계속 들려요. 아무것도 안 울리는데.','나가면 다 잊을 거예요. 진짜로.','문 저거, 열 수 있었는데. 열 수 있었는데…']},
+  acts:['도윤이 환기구 아래에서 귀를 기울인다.','도윤이 제자리에서 스쿼트를 한다. 숫자 세는 소리가 작게 들린다.','도윤이 철문 경첩을 손끝으로 더듬는다.']},
+ {name:'정근',full:'오정근',age:66,job:'은퇴한 교사',policy:'equal',bonus:4,
+  trait:'중재자. 공평함과 원칙에 집착한다. 갈등이 생기면 먼저 나서서 말린다.',
+  secret:'심장약이 사흘치밖에 남지 않았다.',
+  expose:'선생님 약, 사흘치밖에 없대요. 다들 알고 있어야 해요.',
+  confess:'말 안 하려고 했는데요. 심장약이 다 떨어져 갑니다.',
+  lines:{calm:['자, 순서를 정합시다. 공평하면 싸울 일이 없어요.','제가 담임할 때 반에 서른여덟 명이었어요. 여섯 명이면 할 만하지요.','다들 이름부터 다시 말해 봅시다. 이름을 불러야 사람이 보여요.'],
+   tense:['목소리 낮추세요. 다 듣고 있습니다.','규칙을 어긴 사람은 다 같이 이야기해서 정합시다.','이러면 안 됩니다. 이러면 다 같이 무너져요.'],
+   broken:['…약통을 어디 뒀더라.','아이들 이름이 기억이 안 나요. 서른여덟 명인데.','공평한 게 뭔지 이제 모르겠습니다.']},
+  acts:['정근이 벽에 기대 눈을 감는다. 입술이 무언가를 외우듯 움직인다.','정근이 바닥 먼지 위에 손가락으로 배급표를 그린다.','정근이 가슴 주머니를 몇 번이고 만져 본다.']},
+ {name:'태성',full:'김태성',age:38,job:'영업직 회사원',policy:'ally',bonus:5,
+  trait:'말을 잘하고 거래로 사람을 움직인다. 분위기를 읽는 데 능숙하지만 속을 보이지 않는다.',
+  secret:'빚 때문에 "심리 연구 참가자" 모집에 자원했다. 이곳이 실험이라는 걸 처음부터 알았다.',
+  expose:'이 사람 알고 있었어요. 여기가 실험이라는 거. 돈 받고 들어온 거예요!',
+  confess:'…저 모집 공고 보고 왔어요. 심리 연구 참가자. 빚이 있어서요. 여기가 실험인 거, 알고 있었습니다.',
+  lines:{calm:['제가 하나 제안할게요. 다들 손해 안 보는 쪽으로.','이런 데선 분위기가 전부예요. 좀 웃읍시다.','걱정 마세요. 이런 건 길어야 일주일이에요.'],
+   tense:['제 몫 반 드릴게요. 대신 나중에 제 편 좀 들어주세요.','누가 이끌 거면 말 잘하는 사람이 해야죠.','감정적으로 가면 다 손해예요. 계산을 해요, 계산을.'],
+   broken:['카메라 어디 있어요? 보고 있는 거 다 알아요.','계약서에 이런 건 없었어. 없었다고.','돈 필요 없어요. 그냥 내보내 줘요.']},
+  acts:['태성이 한 사람씩 돌아가며 말을 건다. 다들 짧게만 대답한다.','태성이 천장 구석을 오래 올려다본다.','태성이 손가락으로 무언가를 계산하듯 접었다 편다.']},
+ {name:'하은',full:'이하은',age:21,job:'대학생',policy:'equal',bonus:-6,
+  trait:'거의 말이 없다. 사람들은 정체를 몰라 경계하지만, 정작 하은은 모두를 보고 있다.',
+  secret:'모두의 행동을 작은 수첩에 몰래 기록하고 있다.',
+  expose:'이거 봐요. 쟤가 우리를 한 명씩 다 적고 있었어요.',
+  confess:'저… 다 적고 있었어요. 무서워서요. 적으면 덜 무서워서요.',
+  lines:{calm:['…','괜찮아요. 그냥 생각하고 있었어요.','(고개만 짧게 끄덕인다.)'],
+   tense:['저 쳐다보지 마세요.','(수첩을 주머니 깊숙이 밀어 넣는다.)','다들 어제랑 말이 달라요.'],
+   broken:['다들 수첩에 적힌 대로 움직여요. 무서울 만큼.','저는 보기만 했어요. 아무것도 안 했어요.','누가 우리를 적고 있을까요. 저처럼.']},
+  acts:['하은이 무릎을 끌어안고 사람들을 본다. 눈이 마주치면 먼저 피한다.','하은이 주머니 속에서 무언가를 만지작거린다.','하은이 벽의 날짜 선을 소리 없이 센다.']},
+ {name:'미란',full:'최미란',age:41,job:'두 아이의 엄마',policy:'family',bonus:2,
+  trait:'다정하고 사람을 잘 챙긴다. 하지만 아이들 생각에 가장 먼저 무너질 수도, 가장 독해질 수도 있다.',
+  secret:'첫날 배급 때 빵 두 개를 몰래 숨겼다.',
+  expose:'첫날 빵 모자랐던 거 기억나죠? 이 사람 주머니에 있었어요.',
+  confess:'저 첫날에 빵 숨겼어요. 애들 생각하면 무서워서… 미안해요.',
+  lines:{calm:['우리 큰애가 여기 있었으면 벌써 울었을 거예요.','추운 사람 있어요? 제 겉옷 같이 덮어요.','나가면 다들 우리 집 와요. 김치찌개 해 줄게요.'],
+   tense:['저는 나가야 돼요. 애들이 기다린다고요.','제 거 건드리지 마요. 제발.','다 똑같이 배고파요. 저만 참으라고 하지 마요.'],
+   broken:['애들 저녁은 누가 차려 줘요…','나만 나가면 돼. 나만.','엄마가 미안해. 엄마가.']},
+  acts:['미란이 지갑 속 사진을 꺼냈다가 다시 넣는다.','미란이 누군가의 어깨에 자기 겉옷을 덮어 준다.','미란이 주머니를 꼭 쥔 채 벽 쪽으로 돌아눕는다.']}
+];
+
+/* ---------- utils ---------- */
+let S;
+const ri=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const cl=v=>Math.max(0,Math.min(100,Math.round(v)));
+const chance=p=>Math.random()<p;
+function bat(s){const c=s.charCodeAt(s.length-1);if(c<0xAC00||c>0xD7A3)return false;return (c-0xAC00)%28!==0}
+const JP={'은':['은','는'],'이':['이','가'],'을':['을','를'],'과':['과','와'],'이다':['이다','다'],'아':['아','야']};
+function N(i,p){const n=NP[i].name;const s=p?(JP[p]?JP[p][bat(n)?0:1]:p):'';return `<b>${n}</b>${s}`}
+function names(list,p){if(!list.length)return '';const last=NP[list[list.length-1]].name;const s=p?(JP[p]?JP[p][bat(last)?0:1]:p):'';return list.map(i=>`<b>${NP[i].name}</b>`).join(', ')+s}
+const day=()=>Math.floor(S.t/6)+1, ph=()=>S.t%6, isNight=()=>ph()===0||ph()===5;
+function stamp(){const d=day(),p=ph();if(d<=3)return `${d}일째 · ${P[p]}`;if(d<=5)return `${d}일째? · ${P[p]}?`;return `?일째 · ${isNight()?'어둠':'불 켜짐'}`}
+const ids=[0,1,2,3,4,5];
+const pres=()=>ids.filter(i=>S.npcs[i].alive&&!S.npcs[i].iso);
+const living=()=>ids.filter(i=>S.npcs[i].alive);
+const adj=(a,b,v)=>{if(a!==b)S.trust[a][b]=cl(S.trust[a][b]+v)};
+const grp=(i,v)=>pres().forEach(j=>adj(j,i,v));
+const str=(i,v)=>{S.npcs[i].stress=cl(S.npcs[i].stress+v)};
+function avgT(i){const o=pres().filter(j=>j!==i);if(!o.length)return 50;return o.reduce((s,j)=>s+S.trust[j][i],0)/o.length}
+function infl(i){return avgT(i)+NP[i].bonus}
+function leader(){const pr=pres();return pr.sort((a,b)=>infl(b)-infl(a))[0]}
+function tier(i){const s=S.npcs[i].stress;return s<40?'calm':s<70?'tense':'broken'}
+function say(i,tr){return pick(NP[i].lines[tr||tier(i)])}
+function feed(i){S.npcs[i].hunger=cl(S.npcs[i].hunger-22)}
+function moment(text,kind){S.moments.push({st:stamp(),text,kind:kind||''})}
+function pairs(pr){const r=[];for(let a=0;a<pr.length;a++)for(let b=a+1;b<pr.length;b++)r.push(chance(.5)?[pr[a],pr[b]]:[pr[b],pr[a]]);return r}
+const mood=s=>s<35?['평온','var(--calm)']:s<55?['불안','var(--warn)']:s<75?['날카로움','#d48a5a']:['무너짐','var(--rust)'];
+const hungerW=h=>h<40?'견딜 만함':h<70?'배고픔':h<90?'허기짐':'탈진';
+
+/* ---------- new game ---------- */
+function newGame(){
+  const npcs=ids.map(i=>({hunger:22+ri(0,8),stress:10+ri(0,10),alive:true,iso:false,isoT:0,collapsed:false,colT:0,starve:0,pub:false,
+    hidden:i===5?2:(i===1?1:0),knows:[]}));
+  const trust=ids.map(a=>ids.map(b=>a===b?100:50+ri(-6,6)));
+  const set=(a,b,v)=>{trust[a][b]=v};
+  set(0,2,62);set(2,0,60);set(1,5,56);set(5,1,58);set(3,4,40);set(4,3,38);set(0,1,44);set(1,0,46);set(5,4,58);
+  ids.forEach(j=>{if(j!==4)trust[j][4]=Math.min(trust[j][4],44)});
+  const rations={};
+  for(let d=1;d<=3;d++){rations[(d-1)*6+1]=5;rations[(d-1)*6+4]=4}
+  for(let d=4;d<=7;d++){
+    if(chance(.25))continue;
+    const n=chance(.45)?2:1;const used=new Set();
+    for(let k=0;k<n;k++){let p;do{p=ri(0,5)}while(used.has(p));used.add(p);rations[(d-1)*6+p]=ri(2,3)}
+  }
+  S={t:0,npcs,trust,stash:0,rations,notes:[],noteDay:{},moments:[],queue:[],used:[],log:[],guard:null,deaths:[],over:false,
+    f:{paranoia:0,rule:null,ruleT:-99,medsOut:false,treated:false,voteT:-99,lockTries:0,lockT:-99,notesSeen:0,seenAlarm:false,lastTheft:null,dealT:-99,nbT:-99,cam:false,broke:{}}};
+  startPhase(true);
+}
+
+/* ---------- phase flow ---------- */
+function tick(){
+  const d=day(),p=ph(),night=isNight();
+  if(d===4&&p===0)S.f.medsOut=true;
+  living().forEach(i=>{
+    const n=S.npcs[i];
+    n.hunger=cl(n.hunger+(night?3:4.5));
+    let s=0;
+    if(d>=2)s+=1; if(n.hunger>60)s+=2; if(n.hunger>85)s+=3;
+    if(!n.iso&&avgT(i)<40)s+=1; if(d>=4)s+=1;
+    if(night&&n.hunger<60)s-=4; if(n.iso){s+=4;n.isoT++}
+    if(i===2&&S.f.medsOut&&!S.f.treated)s+=1;
+    str(i,s);
+    n.starve=n.hunger>=100?n.starve+1:0;
+  });
+}
+function startPhase(first){
+  if(!first)tick();
+  S.used=[];
+  const q=[];
+  if(S.t===0){q.push('intro','intro2','ambient')}
+  else{
+    q.push('opener','crisis');
+    if(S.rations[S.t])q.push('ration');
+    if(!isNight()&&S.f.lastTheft)q.push('accuse');
+    if(isNight()){q.push('dyn','night')}
+    else{q.push('dyn',chance(.6)?'dyn':'ambient','ambient')}
+  }
+  S.queue=q;
+  addSep();
+  advance();
+}
+function advance(){
+  if(S.over)return;
+  while(S.queue.length){
+    const k=S.queue.shift();
+    const r=GEN[k]();
+    if(r){const o=typeof r==='string'?{text:r}:r;addScene(o.text,o.cls||(isNight()&&k!=='opener'?'dim':''));save();render();return}
+  }
+  if(S.t>=41){ending();return}
+  S.t++;startPhase();
+}
+
+/* ---------- generators ---------- */
+const GEN={
+ intro:()=>({text:'눈을 뜬다. 창문 없는 콘크리트 방, 형광등 네 개, 철문 하나. 바닥에 낯선 사람 다섯이 흩어져 있다. 누구도 어떻게 여기 왔는지 기억하지 못한다.'}),
+ intro2:()=>{
+  return `사람들이 하나둘 일어나 서로를 확인한다. ${N(2,'이')} 먼저 입을 연다. "${NP[2].lines.calm[2]}"<br>${N(0,'은')} 간호사였다고, ${N(1,'은')} 배달 일을 한다고, ${N(3,'은')} 명함부터 꺼내려다 주머니가 비어 있다는 걸 알고 웃는다. ${N(5,'은')} 아이가 둘 있다고 말한다. ${N(4,'은')} 이름만 말하고 입을 닫는다.`},
+ opener:()=>{
+  const d=day(),p=ph();
+  if(d===4&&p===1&&!S.rations[S.t]&&S.npcs[2].alive)return {text:`아침 벨이 울리지 않는다. 사람들이 투입구를 한참 바라본다.<br>${N(2,'이')} 약통을 흔들어 본다. 아무 소리도 나지 않는다. 그는 약통을 다시 주머니에 넣는다.`,cls:''};
+  if(d===4&&p===0&&S.npcs[2].alive)return {text:`비상등만 켜진 새벽. ${N(2,'이')} 마지막 알약을 혀 밑에 넣는 것을, 당신만 본다.`,cls:'dim'};
+  if(d<=3){
+   const L={0:['형광등이 절반만 켜져 있다. 누군가의 고른 숨소리가 들린다.','환기구에서 낮은 바람 소리가 난다. 아직 아무도 움직이지 않는다.','새벽이라 부르기엔 너무 밝고, 아침이라 부르기엔 너무 조용하다.'],
+    1:['형광등이 한꺼번에 밝아진다. 철문 너머에서 벨이 짧게 두 번 울린다.','불이 켜진다. 벨 소리. 사람들이 하나둘 몸을 일으킨다.'],
+    2:['낮이다. 할 일 없는 낮은 생각보다 길다.','형광등 하나가 미세하게 떨린다. 아무도 그 얘기를 하지 않는다.',d>1?'누군가 벽에 손톱으로 선을 긋는다. 선이 하나 늘었다.':'누군가 벽을 두드려 본다. 소리가 둔하게 묻힌다.'],
+    3:['오후. 방 안의 공기가 무거워진다.','시간이 멈춘 것 같다. 시계가 없으니 확인할 방법도 없다.','같은 벽, 같은 바닥, 같은 사람들.'],
+    4:['벨이 울린다. 저녁이다. 모든 눈이 투입구로 향한다.','멀리서 벨 소리가 들린다. 오늘의 마지막 소리일 것이다.'],
+    5:['불이 꺼진다. 비상등의 붉은 점 하나만 남는다.','어둠이 내려앉는다. 누군가 몸을 뒤척이는 소리.','밤. 잠든 척하는 사람이 몇인지 알 수 없다.']};
+   return {text:pick(L[p]),cls:isNight()?'dim':''};
+  }
+  if(isNight())return {text:pick(['불이 꺼졌다. 오늘이 며칠째인지 말하는 사람이 없다.','어둠. 잠들지 못한 사람들의 숨소리가 섞인다.','비상등이 깜빡인다. 아까 꺼졌던 것 같은데, 다시 꺼진다.','누군가 어둠 속에서 날짜를 묻는다. 대답이 셋, 셋 다 다르다.']),cls:'dim'};
+  return pick(['불이 켜져 있다. 낮일 것이다. 아마도.','얼마나 잤는지 모르겠다. 아무도 묻지 않는다.','벨이 울릴 시간이 지난 것 같은데, 조용하다.','누군가 벽의 선을 센다. 셀 때마다 숫자가 다르다.','형광등이 깜빡이다 다시 켜진다. 밤이었는지 낮이었는지 헷갈린다.','배 속의 소리가 시계를 대신한다.','똑같은 구간이 두 번 지나간 것 같은 기분이 든다.']);
+ },
+ crisis:()=>{
+  const out=[];let cls='alarm';
+  living().forEach(i=>{
+   const n=S.npcs[i];
+   if(n.iso&&n.isoT>=6){n.iso=false;n.isoT=0;str(i,-5);out.push(`창고 문이 열린다. ${N(i,'이')} 걸어 나온다. ${pick(['아무와도 눈을 마주치지 않는다.','"…고마워요." 누구에게 하는 말인지 모르겠다.','한쪽 구석에 가서 그대로 앉는다.'])}`)}
+  });
+  const J=S.npcs[2];
+  if(J.alive&&!J.iso){
+   if(S.f.medsOut&&!S.f.treated&&!J.collapsed&&chance(.1+J.stress/400)){
+    J.collapsed=true;J.colT=0;str(2,10);pres().forEach(j=>str(j,6));
+    out.push(`${N(2,'이')} 말을 하다 말고 가슴을 움켜쥔다. 그대로 옆으로 쓰러진다. ${pick(['누군가 비명을 지른다.','방 안이 한순간 멈춘다.'])}`);
+    moment(`${NP[2].name}이 쓰러졌다. 약은 이미 떨어진 뒤였다.`,'x');
+   }else if(J.collapsed){
+    J.colT++;
+    const s=S.npcs[0],need=J.pub?25:45;
+    if(s.alive&&!s.iso&&S.trust[0][2]>=need&&J.colT>=1){
+     J.collapsed=false;S.f.treated=true;str(2,-10);grp(0,10);str(0,-6);
+     out.push(`${N(0,'이')} 무릎을 꿇고 ${N(2,'의')} 가슴을 누르기 시작한다. 숫자를 세는 목소리가 흔들리지 않는다. 한참 뒤, ${N(2,'이')} 숨을 몰아쉰다.<br>${N(0,'은')} 그제야 주저앉는다. 손이 떨리고 있다.`);
+     moment(`${NP[0].name}이 쓰러진 ${NP[2].name}을 살려냈다.`);cls='';
+    }else if(J.colT>=3){out.push(die(2))}
+    else out.push(`${N(2,'은')} 바닥에 누운 채 얕은 숨을 쉰다. ${s.alive&&!s.iso?N(0,'은')+' 멀찍이 서서 다가가지 않는다.':'다가가는 사람이 없다.'}`);
+   }
+  }
+  living().forEach(i=>{
+   const n=S.npcs[i];if(!n.alive)return;
+   if(n.starve===1)out.push(`${N(i,'이')} 일어서려다 그대로 주저앉는다. 눈의 초점이 흐리다.`);
+   if(n.starve>=4)out.push(die(i));
+  });
+  return out.length?{text:out.join('<br><br>'),cls}:null;
+ },
+ ration:()=>ration(),
+ accuse:()=>accuse(),
+ dyn:()=>dynamic(),
+ ambient:()=>ambient(),
+ night:()=>nightScene(),
+ note:()=>null
+};
+
+function die(i){
+ const n=S.npcs[i];n.alive=false;n.iso=false;n.collapsed=false;S.deaths.push(i);
+ living().forEach(j=>str(j,15));
+ moment(`${NP[i].name}이 더 이상 깨어나지 않았다.`,'x');
+ const s=S.npcs[0];
+ return `${N(i,'은')} 더 이상 대답하지 않는다. `+(i!==0&&s.alive&&!s.iso?`${N(0,'이')} 손목을 짚어 보고, 천천히 고개를 젓는다.`:'누군가 말없이 담요를 끌어다 덮어 준다.')+' 한동안 아무도 움직이지 않는다.';
+}
+
+function ration(){
+ const amt=S.rations[S.t];const d=day();
+ let t=d<=3?`투입구가 열리고 쟁반이 밀려 들어온다. 빵 ${amt}개와 물병 하나.`:pick([`예고 없이 투입구가 덜컹 열린다. 모두가 동시에 고개를 든다. 빵 ${amt}개.`,`벨도 없이 쟁반이 밀려 들어온다. 빵은 ${amt}개뿐이다.`]);
+ const pr=pres();if(!pr.length){S.stash+=amt;return t}
+ const L=leader(),pol=NP[L].policy;
+ let order=[...pr];
+ const shuffle=a=>a.sort(()=>Math.random()-.5);
+ if(pol==='equal')shuffle(order);
+ else if(pol==='need')order.sort((a,b)=>S.npcs[b].hunger-S.npcs[a].hunger);
+ else if(pol==='ally')order.sort((a,b)=>(b===L)-(a===L)||S.trust[L][b]-S.trust[L][a]);
+ else if(pol==='self'){shuffle(order);order.sort((a,b)=>(b===L)-(a===L))}
+ else order.sort((a,b)=>(b===L)-(a===L)||S.trust[L][b]-S.trust[L][a]);
+ const recv=order.filter(i=>S.npcs[i].hunger>=12),full=order.filter(i=>S.npcs[i].hunger<12);
+ let pool=amt,fromStash=0;const none=[];
+ recv.forEach(i=>{if(pool>0){pool--;feed(i)}else if(S.stash>0&&pol!=='self'){S.stash--;fromStash++;feed(i)}else none.push(i)});
+ living().filter(i=>S.npcs[i].iso).forEach(i=>{if(pool>0){pool--;feed(i);t+=`<br>남은 하나는 창고 문틈으로 ${N(i,'에게')} 밀어 넣는다.`}else{str(i,6)}});
+ const PT={equal:'공평하게, 한 사람에 하나씩.',need:'가장 배고파 보이는 사람부터.',ally:'자기가 믿는 사람부터, 웃으면서.',self:'자기 몫부터 챙기고, 나머지를 내민다.',family:'자기 몫을 먼저 챙기고, 가까운 사람 순서대로.'};
+ t+=`<br>${N(L,'이')} 나눈다. ${PT[pol]}`;
+ if(fromStash)t+=` 모자란 ${fromStash}개는 배급함에서 꺼낸다.`;
+ if(full.length)t+=` ${names(full,'은')} 아직 배가 차서 받지 않는다.`;
+ if(none.length){
+  t+=` ${names(none,'의')} 몫은 없다.`+(pol==='equal'?' 제비뽑기였다.':'');
+  none.forEach(i=>{adj(i,L,pol==='equal'?-5:-12);str(i,8)});
+  const v=none[0];t+=`<br>${N(v,'이')} ${pick(['낮게 말한다.','쟁반을 노려본다.','입술을 깨문다.'])} "${say(v,'tense')}"`;
+  if(none.length>=2)moment(`배급이 모자랐다. ${none.map(i=>NP[i].name).join(', ')}은 빈손이었다. 나눈 사람은 ${NP[L].name}.`);
+ }
+ if(pool>0){S.stash+=pool;t+=` 남은 ${pool}개는 배급함에 들어간다. 배급함 열쇠는 없다.`}
+ return t;
+}
+
+function accuse(){
+ const th=S.f.lastTheft;S.f.lastTheft=null;
+ const pr=pres();if(pr.length<3)return null;
+ const L=leader();
+ const sus=pr.filter(i=>i!==L).sort((a,b)=>avgT(a)-avgT(b))[0];
+ let t=`${N(L,'이')} 배급함을 열어 본다. 하나가 빈다. 방 안이 조용해진다.<br>시선들이 천천히 ${N(sus,'에게')} 모인다. `;
+ if(sus===th)t+=`${N(sus,'은')} 눈을 피하지 않는다. 그게 더 수상해 보인다.`;
+ else t+=`${N(sus,'이')} "저 아니에요." 하고 말한다. 아무도 대답하지 않는다.`+(S.npcs[th].alive&&!S.npcs[th].iso?` ${N(th,'은')} 그 옆에서 고개를 숙이고 있다.`:'');
+ grp(sus,-12);str(sus,10);S.f.paranoia++;
+ moment(`식량이 없어졌다. 의심은 ${NP[sus].name}에게 갔다. `+(sus===th?'의심이 맞았다.':`실제로 가져간 건 ${NP[th].name}이었다.`));
+ return t;
+}
+
+function guardFor(th){
+ const g=S.guard;
+ if(g&&g.i!==th&&S.npcs[g.i].alive&&!S.npcs[g.i].iso&&((ph()===5&&day()===g.d)||(ph()===0&&day()===g.d+1)))return g.i;
+ if(S.f.rule==='rotation'&&chance(.4)){const c=pres().filter(i=>i!==th);if(c.length)return pick(c)}
+ return null;
+}
+
+function dynamic(){
+ const pr=pres();if(pr.length<2)return ambient();
+ const C=[];const add=(key,w,run)=>{if(!S.used.includes(key))C.push({key,w,run})};
+ const d=day();
+ if(isNight()){
+  const th=pr.filter(i=>S.npcs[i].hunger>55&&S.npcs[i].stress>35&&S.stash>0);
+  if(th.length)add('theft',4+th.length,()=>theft(th.sort((a,b)=>S.npcs[b].hunger-S.npcs[a].hunger)[0]));
+  const he=pr.filter(i=>S.npcs[i].hidden>0&&S.npcs[i].hunger>58);
+  if(he.length)add('hiddenEat',5,()=>hiddenEat(pick(he)));
+  const ps=pairs(pr).filter(([a,b])=>S.trust[a][b]+S.trust[b][a]>115);
+  if(ps.length)add('whisper',3,()=>bond(...pick(ps),true));
+  if(!C.length)return null;
+ }else{
+  let q=null,qs=0;pairs(pr).forEach(([a,b])=>{const T=S.trust[a][b]+S.trust[b][a],st=S.npcs[a].stress+S.npcs[b].stress;if(T<85&&st>65){const s=200-T+st;if(s>qs){qs=s;q=[a,b]}}});
+  if(q)add('quarrel',5,()=>quarrel(...q));
+  const bs=pairs(pr).filter(([a,b])=>S.trust[a][b]+S.trust[b][a]>118);
+  if(bs.length)add('bond',3,()=>bond(...pick(bs),false));
+  const ex=[];pr.forEach(a=>S.npcs[a].knows.forEach(b=>{if(b!==a&&!S.npcs[b].pub&&S.npcs[b].alive&&!S.npcs[b].iso&&S.trust[a][b]<42)ex.push([a,b])}));
+  if(ex.length)add('expose',7,()=>{const [a,b]=pick(ex);return reveal(b,a)});
+  const cf=pr.filter(i=>!S.npcs[i].pub&&S.npcs[i].stress>76);
+  if(cf.length&&chance(.6))add('confess',3,()=>reveal(pick(cf),null));
+  const sh=[];pr.forEach(h=>{if(S.npcs[h].hidden>0)pr.forEach(x=>{if(x!==h&&S.npcs[x].hunger>68&&S.trust[h][x]>68)sh.push([h,x])})});
+  if(sh.length)add('share',4,()=>share(...pick(sh)));
+  const L=leader();
+  if(d>=2&&S.t-S.f.ruleT>=12&&infl(L)>48)add('rule',3,()=>rule(L));
+  if(pr.includes(3)&&d>=2&&S.t-S.f.dealT>=6){const xs=pr.filter(i=>i!==3&&S.npcs[i].hunger>50);if(xs.length)add('deal',3,()=>deal(pick(xs)))}
+  if(pr.includes(4)&&!S.npcs[4].pub&&d>=2&&S.t-S.f.nbT>=8)add('notebook',2,()=>notebook());
+  if(pr.includes(1)&&d>=3&&S.f.lockTries<2&&S.t-S.f.lockT>=10)add('lock',S.npcs[1].pub?5:2,()=>lockTry());
+  if(S.f.paranoia>0&&d>=2&&pr.length>=3)add('search',3+S.f.paranoia,()=>search());
+  const avgS=pr.reduce((s,i)=>s+S.npcs[i].stress,0)/pr.length;
+  if(d>=4&&avgS>55&&S.t-S.f.voteT>=12&&pr.length>=4){const tg=[...pr].sort((a,b)=>avgT(a)-avgT(b))[0];if(avgT(tg)<36)add('vote',6,()=>vote(tg))}
+  if(S.f.notesSeen>=3&&!S.f.seenAlarm)add('noteAlarm',7,()=>noteAlarm());
+  if(S.npcs[3].pub&&!S.f.cam&&pr.length>=3)add('camera',4,()=>camera());
+ }
+ if(!C.length)return ambient();
+ const tot=C.reduce((s,c)=>s+c.w,0);let r=Math.random()*tot;
+ for(const c of C){r-=c.w;if(r<=0){S.used.push(c.key);return c.run()}}
+ S.used.push(C[0].key);return C[0].run();
+}
+
+function quarrel(a,b){
+ const cause=pick(['배급 순서','누가 물을 더 마셨는지','코 고는 소리','말투 하나','자리 문제','어제 했던 말 한마디']);
+ let t=`${N(a,'과')} ${N(b,'이')} 부딪친다. 시작은 ${cause}였다.<br>"${say(a,'tense')}"<br>${N(b,'은')} ${pick(['대답 대신 벽을 친다.','코웃음을 친다.','한참 노려보다 등을 돌린다.','목소리를 높인다. "그쪽이나 잘해요."'])}`;
+ let dv=-12;
+ if(pres().includes(2)&&a!==2&&b!==2&&S.npcs[2].stress<70){t+=`<br>${N(2,'이')} 둘 사이에 선다. "${pick(['자, 여기까지 합시다.','둘 다 배고파서 그래요. 앉아요.','여기서 싸우면 다 집니다.'])}" 겨우 가라앉는다.`;dv=-6;adj(a,2,3);adj(b,2,3)}
+ adj(a,b,dv);adj(b,a,dv);str(a,6);str(b,6);pres().forEach(j=>{if(j!==a&&j!==b)str(j,2)});
+ const k=[a,b].sort().join('-');
+ if(S.trust[a][b]<20&&S.trust[b][a]<25&&!S.f.broke[k]){S.f.broke[k]=1;moment(`${NP[a].name}과 ${NP[b].name}의 사이가 돌이킬 수 없이 틀어졌다.`)}
+ return t;
+}
+function bond(a,b,whisper){
+ let t=whisper?`어둠 속에서 ${N(a,'과')} ${N(b,'이')} 등을 맞대고 앉아 속삭인다. ${pick(['무슨 얘기인지는 들리지 않는다.','가끔 숨죽인 웃음이 새어 나온다.'])}`
+  :`${N(a,'과')} ${N(b,'이')} 구석에 나란히 앉아 낮게 이야기한다. ${pick(['나가면 제일 먼저 먹을 음식 이야기다.','각자 고향 이야기다.','첫 월급으로 뭘 샀는지 이야기한다.','좋아하는 노래를 서로 흥얼거린다.'])}`;
+ str(a,-8);str(b,-8);adj(a,b,5);adj(b,a,5);
+ if(!S.npcs[a].pub&&!S.npcs[b].knows.includes(a)&&S.trust[a][b]>74&&chance(.35)){
+  S.npcs[b].knows.push(a);adj(b,a,a===3?-8:4);
+  t+=`<br>${N(a,'이')} 목소리를 더 낮춘다. ${N(b,'의')} 표정이 잠깐 굳었다가 천천히 풀린다.`;
+  moment(`${NP[a].name}이 ${NP[b].name}에게만 비밀을 털어놓았다.`);
+ }
+ return {text:t,cls:whisper?'dim':''};
+}
+function share(h,x){
+ const n=S.npcs[h];n.hidden--;feed(x);adj(x,h,15);if(!S.npcs[x].knows.includes(h)&&h===5)S.npcs[x].knows.push(h);
+ moment(`${NP[h].name}이 숨겨 둔 먹을 것을 ${NP[x].name}에게 몰래 건넸다.`);
+ return `${N(h,'이')} 아무도 보지 않을 때 ${N(x,'의')} 손에 무언가를 쥐여 준다. ${h===5?'빵 반 조각':'에너지바 하나'}다.<br>${N(x,'은')} 그걸 소매 안에 감추고, 오래 ${N(h,'을')} 바라본다.`;
+}
+function reveal(b,by){
+ const n=S.npcs[b];n.pub=true;
+ let t=by!==null?`${N(by,'이')} 갑자기 모두를 향해 말한다.<br>"${NP[b].expose}"<br>`:`${N(b,'이')} 한참을 망설이다 입을 연다.<br>"${NP[b].confess}"<br>`;
+ const soft=by===null?.5:1;
+ if(b===0){grp(0,-15*soft);str(0,18);t+=`방 안이 얼어붙는다. ${N(0,'이')} "${say(0,'broken')}" 하고 중얼거린다. 아무도 ${N(0,'에게')} 물병을 맡기려 하지 않는다.`}
+ else if(b===1){grp(1,-6*soft);pres().forEach(j=>str(j,4));t+=`모두의 눈이 철문으로 갔다가 ${N(1,'에게')} 돌아온다. "열어 봐요." 누군가 말한다. ${N(1,'은')} 대답하지 못한다.`}
+ else if(b===2){grp(2,6);pres().forEach(j=>adj(0,2,8));t+=`잠시 아무도 말이 없다. ${N(0,'이')} ${N(2,'의')} 옆으로 자리를 옮긴다. "증상 있으면 바로 말해요."`}
+ else if(b===3){grp(3,-25*soft);pres().forEach(j=>str(j,10));t+=`"실험이라고요?" 누군가 소리친다. 방 안의 공기가 완전히 바뀐다. 사람들이 천장과 벽을 의심스럽게 올려다보기 시작한다.`}
+ else if(b===4){grp(4,-20*soft);str(4,15);t+=`수첩이 손에서 손으로 넘어간다. 자기 이름이 적힌 페이지를 찾은 사람들의 얼굴이 하나씩 굳는다. ${N(4,'은')} 무릎에 얼굴을 묻는다.`}
+ else if(b===5){grp(5,-20*soft);str(5,20);t+=n.hidden>0?`주머니에서 빵 ${n.hidden}개가 나온다. 빵은 배급함으로 들어간다. ${N(5,'은')} 두 손으로 얼굴을 가린다.`:`빵은 이미 없다. 먹고 없는 빵 때문에, 방 안의 누구도 ${N(5,'을')} 똑바로 보지 않는다.`;S.stash+=n.hidden;n.hidden=0}
+ if(by!==null){adj(b,by,-25);str(by,-4)}
+ moment(by!==null?`${NP[by].name}이 ${NP[b].name}의 비밀을 모두 앞에서 폭로했다.`:`${NP[b].name}이 스스로 비밀을 털어놓았다.`,'x');
+ return {text:t,cls:'alarm'};
+}
+function rule(L){
+ S.f.ruleT=S.t;
+ const R={0:['물이랑 빵은 제가 관리할게요. 아픈 사람, 약한 사람이 먼저예요.','need'],1:['각자 받은 건 바로 먹어요. 남기면 없어지니까.','eat'],2:['배급은 똑같이 나누고, 밤에는 돌아가며 한 명씩 깨어 있기로 합시다.','rotation'],3:['중요한 건 투표로 정합시다. 진행은 제가 할게요.','vote'],4:['(아무 말 없이 벽에 배급표를 그린다. 칸이 정확히 여섯 개다.)','table'],5:['서로 챙겨요. 우리가 서로 안 챙기면 아무도 안 챙겨 줘요.','care']};
+ const [ln,key]=R[L];S.f.rule=key;
+ const pr=pres();let yes=[],no=[];
+ pr.forEach(j=>{if(j===L)return;(S.trust[j][L]>48?yes:no).push(j)});
+ let t=`${N(L,'이')} 일어나 모두를 본다.<br>"${ln}"<br>`;
+ if(yes.length>=no.length){t+=`${yes.length?names(yes,'이'):'누구도'} 고개를 끄덕인다.`+(no.length?` ${names(no,'은')} 대답하지 않는다.`:'');yes.forEach(j=>{adj(j,L,3);str(j,-4)});no.forEach(j=>adj(j,L,-4));moment(`${NP[L].name}이 규칙을 세웠다.`)}
+ else{t+=`대답이 없다. ${N(no[0],'이')} 피식 웃는다. "누가 그쪽한테 정하래요?"`;S.f.rule=null;str(L,10);no.forEach(j=>adj(j,L,-5))}
+ return t;
+}
+function deal(x){
+ S.f.dealT=S.t;
+ let t=`${N(3,'이')} ${N(x,'의')} 옆에 슬쩍 앉는다. "${say(3,'tense')}"<br>`;
+ if(S.npcs[x].hunger>62||S.trust[x][3]>55){adj(x,3,10);adj(3,x,6);S.npcs[3].hunger=cl(S.npcs[3].hunger+10);S.npcs[x].hunger=cl(S.npcs[x].hunger-12);t+=`${N(x,'은')} 잠깐 망설이다 손을 내민다. 거래가 성사된다.`}
+ else{adj(x,3,-5);t+=`${N(x,'은')} 고개를 젓는다. "그런 식으로 사람 사는 거 아니에요."`}
+ return t;
+}
+function notebook(){
+ S.f.nbT=S.t;
+ const ob=pres().filter(i=>i!==4);const w=pick(ob);
+ if(chance(.5))return {text:`${N(4,'이')} 무릎 위에서 무언가를 빠르게 적는다. 누가 쳐다보면 손을 멈춘다.`,cls:''};
+ adj(w,4,-10);if(!S.npcs[w].knows.includes(4))S.npcs[w].knows.push(4);
+ let t=`${N(w,'이')} ${N(4,'의')} 손을 본다. 작은 수첩, 그리고 거기 적힌 자기 이름.<br>`;
+ if(S.npcs[w].stress>60){t+=`"지금 뭐 적어?" ${N(w,'이')} 다가간다. ${N(4,'은')} 수첩을 가슴에 끌어안는다. ${pick(['다른 사람들이 쳐다본다.','둘 사이에 긴 침묵이 흐른다.'])}`;str(4,10);grp(4,-4)}
+ else t+=`${N(w,'은')} 아무 말도 하지 않는다. 하지만 그 뒤로 ${N(4,'을')} 자주 본다.`;
+ return t;
+}
+function lockTry(){
+ S.f.lockT=S.t;S.f.lockTries++;
+ let t=S.npcs[1].pub?`사람들의 등쌀에 ${N(1,'이')} 철문 앞에 선다. 숟가락 손잡이를 잠금장치 틈에 밀어 넣는다.`:`${N(1,'이')} 아무도 안 볼 때 철문 앞에 쪼그려 앉는다. 숟가락 손잡이를 잠금장치 틈에 밀어 넣는다.`;
+ if(S.f.lockTries===1){t+=`<br>딸깍. 무언가 걸리는 소리. 문이 1센티쯤 흔들린다. 그리고 다시 멈춘다.<br>방 안의 모두가 그 소리를 들었다.`;pres().forEach(j=>str(j,-7));grp(1,6);moment(`${NP[1].name}이 철문을 열어 보려 했다. 문이 아주 조금 흔들렸다.`)}
+ else{t+=`<br>이번엔 숟가락이 부러진다. ${N(1,'이')} 문에 이마를 댄 채 한참 움직이지 않는다.`;pres().forEach(j=>str(j,6));str(1,10)}
+ return t;
+}
+function search(){
+ S.f.paranoia=Math.max(0,S.f.paranoia-2);
+ const pr=pres();const L=leader();
+ let t=`"다들 주머니 비워 봐요." ${N(L,'의')} 말에 아무도 웃지 않는다. 한 사람씩 주머니와 가방을 뒤집는다.<br>`;
+ if(pr.includes(5)&&S.npcs[5].hidden>0&&L!==5){t+=`${N(5,'의')} 주머니에서 빵이 나온다.`;const r=reveal(5,L);return {text:t+'<br>'+r.text.split('<br>').slice(2).join('<br>'),cls:'alarm'}}
+ if(pr.includes(1)&&S.npcs[1].hidden>0&&L!==1){S.npcs[1].hidden=0;S.stash++;grp(1,-8);str(1,8);moment(`몸수색에서 ${NP[1].name}의 숨긴 에너지바가 나왔다.`);return t+`${N(1,'의')} 가방 안쪽에서 에너지바 하나가 나온다. "비상용이었어요." 아무도 믿지 않는다.`}
+ if(pr.includes(4)&&!S.npcs[4].pub&&L!==4){const r=reveal(4,L);return {text:t+`${N(4,'의')} 주머니에서 수첩이 나온다.<br>`+r.text.split('<br>').slice(2).join('<br>'),cls:'alarm'}}
+ grp(L,-6);pr.forEach(j=>str(j,4));
+ return t+`아무것도 나오지 않는다. 뒤집힌 주머니들만 남는다. 사람들이 ${N(L,'을')} 보는 눈이 조금 달라진다.`;
+}
+function vote(tg){
+ S.f.voteT=S.t;
+ const pr=pres();let pro=leader();if(pro===tg)pro=pr.filter(i=>i!==tg).sort((a,b)=>infl(b)-infl(a))[0];
+ let t=`${N(pro,'이')} 말을 꺼낸다. "${pick(['하루만이에요. 창고에 하루만 있으면 다들 좀 숨 쉴 수 있어요.','투표합시다. 이대로는 다 같이 못 버텨요.'])}"<br>모두의 눈이 ${N(tg,'에게')} 간다.<br>`;
+ let yes=0,no=0;pr.forEach(j=>{if(j===tg)return;(S.trust[j][tg]<45||S.trust[j][pro]>62)?yes++:no++});
+ t+=`찬성 ${yes}, 반대 ${no}.<br>`;
+ if(yes>no){S.npcs[tg].iso=true;S.npcs[tg].isoT=0;str(tg,22);pr.forEach(j=>{if(j!==tg)str(j,-6)});
+  t+=`${N(tg,'은')} 창고로 들어간다. ${pick(['문이 닫히기 직전까지 아무도 쳐다보지 않는다.',`마지막으로 "${say(tg,'broken')}" 하는 소리가 들린다.`])}`;
+  moment(`투표로 ${NP[tg].name}이 창고에 격리되었다. 제안한 사람은 ${NP[pro].name}.`,'x');}
+ else{grp(pro,-7);str(pro,8);t+=`부결. ${N(pro,'은')} 아무 일 없었다는 듯 자리에 앉는다. 하지만 ${N(tg,'은')} 그 얼굴을 잊지 않을 것이다.`;adj(tg,pro,-25)}
+ return {text:t,cls:'alarm'};
+}
+function noteAlarm(){
+ S.f.seenAlarm=true;pres().forEach(j=>str(j,7));
+ const pr=pres();const a=pick(pr);
+ moment('사람들이 쪽지의 존재를 눈치챘다. 보내는 사람이 누구인지를 두고 의심이 번졌다.','n');
+ return {text:`${N(a,'이')} 투입구를 가리킨다. "저기로 종이가 들어와요. 몇 번이나 봤어요. 누가 받고 있는 거예요?"<br>방 안의 모두가 서로를 본다. 쪽지를 받은 적 있는 사람들이 하나같이 시선을 피한다.`,cls:'alarm'};
+}
+function camera(){
+ S.f.cam=true;const pr=pres();pr.forEach(j=>str(j,5));
+ return `사람들이 벽을 더듬기 시작한다. 콘센트 구멍, 형광등 틈, 환기구 날개. ${N(pick(pr.filter(i=>i!==3).length?pr.filter(i=>i!==3):pr),'이')} 천장을 향해 소리친다. "보고 있는 거 다 알아요!"<br>대답은 없다. 형광등만 미세하게 웅웅거린다.`;
+}
+function theft(th){
+ const g=guardFor(th);
+ if(g!==null){adj(g,th,-20);grp(th,-10);str(th,15);S.f.paranoia++;
+  moment(`${NP[th].name}이 밤에 배급함에 손을 대다 ${NP[g].name}에게 붙잡혔다.`,'x');
+  return {text:`어둠 속에서 누군가 배급함 쪽으로 기어간다. 그 손목을 다른 손이 잡는다. ${N(g,'이')}다. "${pick(['뭐 하는 거예요.','다 봤어요.'])}"<br>비상등 불빛에 ${N(th,'의')} 얼굴이 드러난다.`,cls:'alarm'}}
+ S.stash--;feed(th);S.f.lastTheft=th;
+ return {text:`어둠 속에서 누군가 배급함 쪽으로 기어간다. 비상등 불빛에 얼굴이 잠깐 드러난다. ${N(th,'이다')}.<br>씹는 소리를 삼키려 애쓰는 소리. 아무도 깨지 않는다. 당신만 봤다.`,cls:'dim'};
+}
+function hiddenEat(i){
+ S.npcs[i].hidden--;feed(i);
+ let t=`${N(i,'이')} 이불 속으로 손을 넣는다. 아주 천천히, 소리 없이 무언가를 먹는다.`;
+ const w=pres().filter(j=>j!==i&&S.npcs[j].stress>45);
+ if(w.length&&chance(.3)){const x=pick(w);if(!S.npcs[x].knows.includes(i))S.npcs[x].knows.push(i);adj(x,i,-12);t+=`<br>건너편에서 ${N(x,'의')} 눈이 떠 있다.`}
+ return {text:t,cls:'dim'};
+}
+function ambient(){
+ const pr=pres().filter(i=>!S.used.includes('a'+i));
+ if(!pr.length)return null;
+ const i=pick(pr);S.used.push('a'+i);
+ if(isNight())return nightScene();
+ if(chance(.5))return pick(NP[i].acts).replace(NP[i].name,N(i,''));
+ const ln=say(i);
+ if(ln.startsWith('('))return `${N(i,'은')} ${ln.slice(1,-1)}`;
+ return `${N(i,'이')} ${pick(['말한다.','중얼거린다.','누구에게랄 것 없이 말한다.'])} "${ln}"`;
+}
+function nightScene(){
+ if(S.used.includes('nt'))return null;S.used.push('nt');
+ const pr=pres();if(!pr.length)return null;
+ const ps=pairs(pr).filter(([a,b])=>S.trust[a][b]+S.trust[b][a]>120);
+ const br=pr.filter(i=>S.npcs[i].stress>62);
+ const opts=[];
+ if(ps.length)opts.push(()=>{const [a,b]=pick(ps);return `${N(a,'과')} ${N(b,'이')} 담요 하나를 나눠 덮고 잔다.`});
+ if(br.length)opts.push(()=>{const i=pick(br);return `누군가 잠꼬대를 한다. ${N(i,'의')} 목소리다. "${say(i,'broken')}"`});
+ opts.push(()=>{const i=pick(pr);return `${N(i,'만')} 깨어 있다. 천장의 비상등을 오래 바라본다.`});
+ opts.push(()=>'코 고는 소리, 이 가는 소리, 배 속에서 꾸르륵거리는 소리. 밤은 생각보다 시끄럽다.');
+ living().filter(i=>S.npcs[i].iso).forEach(i=>opts.push(()=>`창고 문 너머에서 ${N(i,'이')} 벽을 두드리는 소리가 들린다. 세 번, 쉬고, 세 번.`));
+ return {text:pick(opts)(),cls:'dim'};
+}
+
+/* ---------- notes ---------- */
+const NOTE={
+ doubt:{label:'의심 심기',hint:'받는 사람이 지목한 사람을 경계하게 된다',need:true,txt:s=>`${NP[s].name}을(를) 조심하세요. 당신을 지켜보고 있어요.`},
+ secret:{label:'비밀 알려주기',hint:'참가자 파일 속 비밀을 한 사람에게 흘린다',need:true,txt:s=>`${NP[s].name}의 비밀: ${NP[s].secret}`},
+ warn:{label:'거짓 경고',hint:'불안을 키우고 몸수색을 부른다',need:false,txt:()=>'누군가 먹을 것을 몰래 숨기고 있어요.'},
+ comfort:{label:'위로',hint:'받는 사람의 마음이 조금 가라앉는다',need:false,txt:()=>'당신 잘못이 아니에요. 조금만 더 버텨요.'},
+ order:{label:'지시',hint:'오늘 밤, 받는 사람이 배급함을 지킨다',need:false,txt:()=>'오늘 밤, 잠들지 말고 배급함 옆에 있어요.'}
+};
+let ND={r:null,type:null,s:null};
+function openNote(){
+ ND={r:null,type:null,s:null};drawNote();$('#notebox').hidden=false;
+}
+function drawNote(){
+ const al=living();
+ let h=`<h2>쪽지</h2><p class="lbl">오늘은 한 장만 보낼 수 있다. 투입구 틈으로, 한 사람에게만.</p>
+ <h3>받는 사람</h3><div class="chips">${al.map(i=>`<button class="chip" data-r="${i}" aria-pressed="${ND.r===i}">${NP[i].name}${S.npcs[i].iso?' · 창고':''}</button>`).join('')}</div>
+ <h3>내용</h3><div class="opts">${Object.entries(NOTE).map(([k,v])=>`<button class="opt" data-t="${k}" aria-pressed="${ND.type===k}"><span>${v.label}</span><small>${v.hint}</small></button>`).join('')}</div>`;
+ if(ND.type&&NOTE[ND.type].need){
+  const cand=al.filter(i=>i!==ND.r&&(ND.type!=='secret'||!S.npcs[i].pub));
+  h+=`<h3>${ND.type==='secret'?'누구의 비밀':'누구를'}</h3><div class="chips">${cand.map(i=>`<button class="chip" data-s="${i}" aria-pressed="${ND.s===i}">${NP[i].name}</button>`).join('')||'<span class="lbl">고를 수 있는 사람이 없다.</span>'}</div>`;
+ }
+ const ready=ND.r!==null&&ND.type&&(!NOTE[ND.type].need||(ND.s!==null&&ND.s!==ND.r));
+ h+=`<div class="slip">${ready?NOTE[ND.type].txt(ND.s):'<span style="opacity:.45">받는 사람과 내용을 고르면 여기에 문장이 적힌다.</span>'}</div>
+ <div class="row"><button class="btn" id="n-x">그만두기</button><button class="btn paper" id="n-ok" ${ready?'':'disabled'}>투입구로 밀어 넣기</button></div>`;
+ $('#note-in').innerHTML=h;
+ $('#note-in').querySelectorAll('[data-r]').forEach(b=>b.onclick=()=>{ND.r=+b.dataset.r;if(ND.s===ND.r)ND.s=null;drawNote()});
+ $('#note-in').querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>{ND.type=b.dataset.t;ND.s=null;drawNote()});
+ $('#note-in').querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>{ND.s=+b.dataset.s;drawNote()});
+ $('#n-x').onclick=()=>$('#notebox').hidden=true;
+ $('#n-ok').onclick=sendNote;
+}
+function sendNote(){
+ const {r,type,s}=ND;S.noteDay[day()]=1;$('#notebox').hidden=true;
+ const n=S.npcs[r];let t=n.iso?`창고 문 아래 틈으로 접힌 종이 한 장을 밀어 넣는다. ${N(r,'이')} 그것을 주워 든다.<br>`:`투입구 틈으로 접힌 종이 한 장이 미끄러져 들어온다. ${N(r,'이')} 가장 먼저 발견하고, 몰래 펼친다.<br>`;
+ let res='';
+ if(type==='doubt'){adj(r,s,-25);str(r,6);t+=`${N(r,'은')} 종이를 구겨 쥐고 ${N(s,'을')} 오래 바라본다.`;res=`${NP[r].name}이 ${NP[s].name}을 경계하기 시작했다.`}
+ else if(type==='secret'){if(!n.knows.includes(s))n.knows.push(s);adj(r,s,s===2?6:(s===3?-22:-15));str(r,s===2?2:5);t+=s===2?`${N(r,'의')} 눈이 ${N(2,'의')} 가슴 주머니로 간다. 걱정스러운 얼굴이다.`:`${N(r,'의')} 얼굴이 굳는다. 시선이 천천히 ${N(s,'에게')} 간다.`;res=`${NP[r].name}이 ${NP[s].name}의 비밀을 알게 되었다.`}
+ else if(type==='warn'){str(r,12);S.f.paranoia+=2;t+=`${N(r,'이')} 사람들의 주머니와 가방을 하나씩 눈으로 훑는다.`;res=`${NP[r].name}의 의심이 방 안에 번지기 시작했다.`}
+ else if(type==='comfort'){str(r,-22);ids.forEach(j=>adj(r,j,4));t+=`${N(r,'의')} 어깨가 조금 내려간다. 종이를 접어 가슴 주머니에 넣는다.`;res=`${NP[r].name}의 마음이 조금 풀렸다.`}
+ else if(type==='order'){S.guard={i:r,d:day()};t+=`${N(r,'은')} 종이를 잘게 찢어 버린다. 그리고 말없이 배급함 근처로 자리를 옮긴다.`;res=`${NP[r].name}이 그날 밤 배급함을 지키기로 했다.`}
+ S.notes.push({st:stamp(),to:r,txt:NOTE[type].txt(s)});
+ const w=pres().filter(j=>j!==r);
+ if(!n.iso&&w.length&&chance(.38)){const x=pick(w);adj(x,r,-8);S.f.notesSeen++;t+=`<br>${N(x,'이')} 그 모습을 봤다. 아무 말도 하지 않는다.`}
+ moment(`쪽지 → ${NP[r].name}: ${res}`,'n');
+ addScene(t,'note');save();render();
+}
+
+/* ---------- ending ---------- */
+const EPI={
+ 0:(n,f)=>!n.alive?'서진은 문이 열리는 걸 보지 못했다. 그녀가 물병에 새겨 둔 눈금만 남았다.':S.f.treated?'서진은 다시 응급실 야간 근무를 시작했다. 정근의 가슴을 누르던 손이 아직 그 박자를 기억한다.':n.pub&&n.stress<60?'밖으로 나온 서진은 12년 만에 그 후배에게 전화를 걸었다. 받지 않았다. 서진은 긴 문자를 남겼다.':n.pub?'서진의 일은 소문으로 퍼졌다. 그녀는 이사를 갔고, 다시는 흰 옷을 입지 않았다.':'서진은 평범한 일상으로 돌아갔다. 장을 볼 때마다 물병을 세는 버릇만 남았다.',
+ 1:(n)=>!n.alive?'도윤의 휴대폰에는 끝내 받지 못한 콜이 쌓여 있었다.':S.f.lockTries>=2?'도윤은 나오자마자 그 건물 주소를 경찰에 넘겼다. 담당자는 그런 건물이 서류에 없다고 했다.':n.stress>=60?'도윤은 배달 일을 그만뒀다. 닫힌 문 앞에 서면 숨이 막혔다.':'도윤은 다시 오토바이에 올랐다. 요즘은 계단을 오를 때마다 문 잠금장치부터 본다.',
+ 2:(n)=>!n.alive?'정근은 조용히 떠났다. 바닥 먼지 위에 그가 그린 배급표가 며칠 더 남아 있었다.':S.f.treated?'정근은 병원에서 깨어나 서진의 이름부터 물었다. 그해 겨울, 그는 옛 제자들에게 편지를 쓰기 시작했다.':n.stress>=60?'정근은 한동안 사람 많은 곳에 가지 않았다. 서른여덟 명의 이름은 끝내 다 떠올리지 못했다.':'정근은 동네 도서관에서 아이들에게 글쓰기를 가르친다. 첫 수업 주제는 "공평하다는 것"이었다.',
+ 3:(n)=>!n.alive?'태성의 통장에는 참가비가 입금되었다. 받을 사람이 없었다.':n.pub?'태성은 참가비를 받았다. 빚을 갚고도 남았다. 그는 남은 돈을 한 푼도 쓰지 못했다.':n.stress>=60?'태성은 지금도 방에 들어가면 천장 구석부터 본다. 카메라는 한 번도 찾지 못했다.':'태성은 참가비로 빚을 갚았다. 밀실 이야기는 누구에게도 하지 않았다. 계약서에 그렇게 적혀 있었다.',
+ 4:(n)=>!n.alive?'하은의 수첩은 마지막 장까지 채워져 있었다. 마지막 줄은 아무도 알아볼 수 없었다.':n.pub?'수첩은 사람들 손에 찢겨 나갔다. 하은은 그 뒤로 아무것도 적지 않는다.':n.stress<50?'하은은 수첩을 정리해 졸업 논문을 썼다. 제목은 「작은 방의 일주일」. 등장인물 이름은 모두 바꿨다.':'하은은 수첩을 강물에 버렸다. 그래도 내용은 전부 기억하고 있다.',
+ 5:(n)=>!n.alive?(n.hidden>0?'미란이 숨겨 둔 빵은 끝내 아무도 먹지 못했다.':'미란의 지갑 속 사진은 문이 열린 뒤에야 가족에게 돌아갔다.'):n.pub?'미란은 아이들에게 그 일주일 이야기를 하지 않았다. 빵 이야기는 더더욱.':n.stress>=60?'미란은 집에 돌아왔다. 밤마다 냉장고를 몇 번이고 열어 본다. 아이들은 엄마가 조금 변했다고 말한다.':'미란은 집에 돌아와 아이들 저녁을 차렸다. 평소보다 한 그릇을 더 만들었다. 누구 몫인지는 말하지 않았다.'
+};
+function ending(){
+ S.over=true;save();
+ const al=living(),dc=S.deaths.length;
+ let sum=0,c=0;al.forEach(a=>al.forEach(b=>{if(a!==b){sum+=S.trust[a][b];c++}}));const avg=c?sum/c:0;
+ const L=al.length?al.sort((a,b)=>{const ia=al.filter(j=>j!==a).reduce((s,j)=>s+S.trust[j][a],0),ib=al.filter(j=>j!==b).reduce((s,j)=>s+S.trust[j][b],0);return ib-ia})[0]:null;
+ const Linf=L!==null&&al.length>1?al.filter(j=>j!==L).reduce((s,j)=>s+S.trust[j][L],0)/(al.length-1):0;
+ let title,line;
+ if(dc>=3){title='붕괴';line='문이 열렸을 때, 방은 너무 조용했다.'}
+ else if(dc>=1&&avg<45){title='생존자들';line='살아남은 사람들은 서로를 보지 않고 문을 나섰다.'}
+ else if(dc===0&&avg>=55){title='작은 마을';line='문이 열렸는데, 아무도 먼저 나가지 않았다. 누군가 "같이 나가요" 하고 말했다.'}
+ else if(Linf>=66){title='작은 왕국';line=`${NP[L].name}의 말이 곧 규칙이었다. 문이 열리자 사람들은 ${NP[L].name}의 얼굴부터 보았다.`}
+ else if(dc===0&&avg<40){title='금이 간 방';line='문이 열렸다. 여섯 사람은 일주일 전보다 서로를 더 모르는 얼굴로 나갔다.'}
+ else if(dc>=1){title='빈자리';line='문이 열렸다. 빈자리 하나를 앞에 두고 사람들은 오래 서 있었다.'}
+ else {title='낯선 사람들';line='문이 열렸다. 일주일을 함께 보낸 여섯 사람은 처음 만난 사람들처럼 각자 흩어졌다.'}
+ const fate=i=>{const n=S.npcs[i];if(!n.alive)return ['사망','x'];if(n.iso)return ['창고에서 발견',''];if(n.hunger>=90)return ['탈진 상태로 생존',''];return ['생존',''];};
+ const rel=i=>{const o=ids.filter(j=>j!==i&&(S.npcs[j].alive||S.deaths.includes(j)));if(!o.length)return '';const best=o.reduce((a,b)=>S.trust[i][a]>=S.trust[i][b]?a:b),worst=o.reduce((a,b)=>S.trust[i][a]<=S.trust[i][b]?a:b);return `가장 믿은 사람 ${NP[best].name} · 끝까지 경계한 사람 ${NP[worst].name}`};
+ let h=`<p class="lbl">7일째 밤 · 철문이 열린다</p>
+ <p class="lead">스피커에서 처음으로 목소리가 흘러나온다. "실험이 종료되었습니다. 참가자 여러분은 문을 통해 나와 주십시오."${S.npcs[3].pub?' 몇몇은 이미 알고 있었다.':' 대부분은 그제야 이곳이 무엇이었는지 알았다.'}</p>
+ <h2 class="endt">${title}</h2><p class="lead">${line}</p>
+ <h3 style="margin:0;font-size:12px;letter-spacing:.08em;color:var(--muted);font-weight:500">그 후</h3>
+ <div class="ep">${ids.map(i=>{const [f,x]=fate(i);return `<article><div class="who"><strong>${NP[i].full}</strong><span class="fate ${x}">${f}</span></div><p>${EPI[i](S.npcs[i])}</p><span class="rel">${S.npcs[i].alive?rel(i):''}</span></article>`}).join('')}</div>
+ <h3 style="margin:0;font-size:12px;letter-spacing:.08em;color:var(--muted);font-weight:500">주요 순간</h3>
+ <ul class="tl">${S.moments.length?S.moments.map(m=>`<li class="${m.kind==='n'?'n':''}"><span>${m.st}</span>${m.text}</li>`).join(''):'<li><span>—</span>특별한 일 없이 일주일이 지나갔다.</li>'}</ul>
+ <h3 style="margin:0;font-size:12px;letter-spacing:.08em;color:var(--muted);font-weight:500">당신이 보낸 쪽지 ${S.notes.length}장 / 7장</h3>
+ <ul class="tl">${S.notes.length?S.notes.map(n=>`<li class="n"><span>${n.st}</span>${NP[n.to].name}에게 — "${n.txt}"</li>`).join(''):'<li><span>—</span>당신은 한 번도 개입하지 않았다. 이 결말은 그들 스스로 만든 것이다.</li>'}</ul>
+ <div class="row" style="justify-content:flex-start"><button class="btn go" id="b-again" style="flex:none">다시 관찰하기</button></div>`;
+ $('#end-in').innerHTML=h;$('#ending').hidden=false;$('#ending').scrollTop=0;
+ $('#b-again').onclick=()=>{$('#ending').hidden=true;$('#feed').innerHTML='';newGame()};
+ render();
+}
+
+/* ---------- render ---------- */
+const $=s=>document.querySelector(s);
+function addSep(){
+ const d=day(),p=ph();if(p!==0&&S.t!==0)return;
+ S.log.push({sep:d<=3?`${d}일째`:d<=5?`${d}일째?`:'?일째'});trimLog();
+ const e=document.createElement('div');e.className='sep';e.textContent=S.log[S.log.length-1].sep;$('#feed').appendChild(e);
+}
+function addScene(text,cls){
+ const o={st:stamp(),text,cls:cls||''};S.log.push(o);trimLog();
+ const e=sceneEl(o);e.classList.add('new');$('#feed').appendChild(e);
+ requestAnimationFrame(()=>{const f=$('#feed');f.scrollTop=f.scrollHeight});
+}
+function sceneEl(o){const e=document.createElement('article');e.className='sc '+o.cls;e.innerHTML=`<div class="st">${o.st}</div><p>${o.text}</p>`;return e}
+function trimLog(){if(S.log.length>90)S.log.splice(0,S.log.length-90)}
+function rebuildFeed(){const f=$('#feed');f.innerHTML='';S.log.forEach(o=>{if(o.sep){const e=document.createElement('div');e.className='sep';e.textContent=o.sep;f.appendChild(e)}else f.appendChild(sceneEl(o))});f.scrollTop=f.scrollHeight}
+function render(){
+ const c=$('#clk');c.textContent=stamp();c.classList.toggle('fuzzy',day()>=4);
+ $('#m-stash').textContent=S.stash;
+ const nl=S.noteDay[day()]?0:1;$('#m-note').textContent=nl;
+ $('#b-note').disabled=!nl||S.over;
+ $('#ticks').innerHTML=Array.from({length:42},(_,k)=>`<i class="${k<S.t?'done':k===S.t?'now':''} ${k>=18&&k>S.t?'blur':''}"></i>`).join('');
+ $('#room').innerHTML=ids.map(i=>{const n=S.npcs[i];const [mw,mc]=mood(n.stress);
+  const st=!n.alive?'사망':n.iso?'창고':n.collapsed?'쓰러짐':mw;
+  return `<button class="p ${!n.alive?'dead':''} ${n.iso?'iso':''}" data-i="${i}"><span class="nm"><span>${NP[i].name}</span>${n.pub?'<span title="비밀이 드러남" style="color:var(--rust);font-size:11px">●</span>':''}</span><span class="jb">${NP[i].job}</span>
+  <span class="md"><span class="dot" style="background:${n.alive?(n.collapsed?'var(--rust)':mc):'var(--line)'}"></span>${st}</span>
+  <span class="bar" aria-label="배고픔"><span style="width:${n.alive?n.hunger:0}%;${n.hunger>=90?'background:var(--rust)':''}"></span></span></button>`}).join('');
+ $('#room').querySelectorAll('.p').forEach(b=>b.onclick=()=>openSheet(+b.dataset.i));
+ const g=$('#b-go');const last=!S.queue.length;
+ g.textContent=S.over?'관찰 종료':last?(S.t>=41?'문이 열리기를 기다리기':'시간을 흘려보내기'):'계속 지켜보기';
+ g.classList.toggle('pass',last&&!S.over);g.disabled=S.over;
+}
+function openSheet(i){
+ const n=S.npcs[i];const [mw]=mood(n.stress);
+ const o=ids.filter(j=>j!==i&&S.npcs[j].alive);
+ let rel='';
+ if(n.alive&&o.length){const b=o.reduce((a,c)=>S.trust[i][a]>=S.trust[i][c]?a:c),w=o.reduce((a,c)=>S.trust[i][a]<=S.trust[i][c]?a:c);
+  rel=`<p>${N(b,'의')} 곁에 자주 앉는다. ${S.trust[i][w]<35?`${N(w,'과')}는 눈을 마주치지 않는다.`:`${N(w,'을')} 가끔 곁눈질로 본다.`}</p>`}
+ const kn=n.knows.filter(j=>j!==i);
+ $('#sheet-in').innerHTML=`<div><p class="lbl">${NP[i].age}세 · ${NP[i].job}</p><h2>${NP[i].full}</h2></div>
+ <p>${NP[i].trait}</p>
+ ${n.alive?`<div class="stat"><span>배고픔</span><span class="bar"><span style="width:${n.hunger}%"></span></span><span class="v">${hungerW(n.hunger)}</span></div>
+ <div class="stat"><span>마음</span><span class="bar"><span style="width:${n.stress}%;background:${mood(n.stress)[1]}"></span></span><span class="v">${mw}</span></div>
+ <div class="stat"><span>신뢰받음</span><span class="bar"><span style="width:${avgT(i)}%;background:var(--calm)"></span></span><span class="v">${Math.round(avgT(i))}</span></div>`:'<p class="lbl">더 이상 이 방에 없다.</p>'}
+ ${rel}
+ <div class="file"><span class="tag">참가자 파일 · ${n.pub?'모두가 알게 됨':'아직 비밀'}</span>${NP[i].secret}</div>
+ ${kn.length?`<p class="lbl">알고 있는 남의 비밀: ${kn.map(j=>NP[j].name).join(', ')}</p>`:''}
+ <div class="row"><button class="btn" id="s-x">닫기</button></div>`;
+ $('#sheet').hidden=false;$('#s-x').onclick=()=>$('#sheet').hidden=true;$('#s-x').focus();
+}
+
+/* ---------- save ---------- */
+const KEY='milsil7-v1';
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+function load(){try{const r=localStorage.getItem(KEY);return r?JSON.parse(r):null}catch(e){return null}}
+
+/* ---------- boot ---------- */
+$('#cast').innerHTML=ids.map(i=>`<div><strong>${NP[i].name}</strong>${NP[i].age}세 · ${NP[i].job}</div>`).join('');
+const saved=load();
+if(saved&&!saved.over)$('#b-cont').hidden=false;
+$('#b-start').onclick=()=>{$('#intro').hidden=true;$('#feed').innerHTML='';newGame()};
+$('#b-cont').onclick=()=>{S=saved;$('#intro').hidden=true;rebuildFeed();render()};
+$('#b-go').onclick=()=>advance();
+$('#b-note').onclick=()=>openNote();
+['#sheet','#notebox'].forEach(s=>$(s).addEventListener('click',e=>{if(e.target===$(s))$(s).hidden=true}));
+document.addEventListener('keydown',e=>{
+ if(e.key==='Escape'){$('#sheet').hidden=true;$('#notebox').hidden=true;return}
+ if((e.key===' '||e.key==='Enter')&&$('#intro').hidden&&$('#sheet').hidden&&$('#notebox').hidden&&$('#ending').hidden&&document.activeElement.tagName!=='BUTTON'){e.preventDefault();advance()}
+});
+</script>
+
+</body></html>

@@ -1,0 +1,1335 @@
+<!doctype html><html><head><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script><script src="../assets/config.js"></script><script src="../assets/member.js" data-game="castaway-island"></script><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>표류자들의 섬</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Song+Myung&family=Gowun+Dodum&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: 조난 항해일지 — 왼쪽은 섬 지도와 보급 현황, 오른쪽은 생존자 명단과 일지. 사건이 터지면 지도 위로 상황판이 뜬다. */
+:root{
+  --bg:#e9eeec;--panel:#f6f8f6;--ink:#16262b;--muted:#5a6b6e;--line:#c9d3d1;
+  --sea:#1f6672;--flare:#e4571b;--good:#2f7d4f;--bad:#b8322a;--warn:#b07a12;--chip:#dfe7e5;
+  --shadow:0 10px 30px rgba(10,30,35,.18);
+  --f-display:"Song Myung","Nanum Myeongjo",serif;
+  --f-body:"Gowun Dodum","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0e1719;--panel:#152225;--ink:#e3ecea;--muted:#8fa3a5;--line:#28393c;--sea:#5fb4bf;--flare:#ff7a3d;--good:#5cc184;--bad:#ff6b5e;--warn:#e0b04a;--chip:#1d2d31;--shadow:0 10px 30px rgba(0,0,0,.5);color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0e1719;--panel:#152225;--ink:#e3ecea;--muted:#8fa3a5;--line:#28393c;--sea:#5fb4bf;--flare:#ff7a3d;--good:#5cc184;--bad:#ff6b5e;--warn:#e0b04a;--chip:#1d2d31;--shadow:0 10px 30px rgba(0,0,0,.5);color-scheme:dark}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.55}
+*{box-sizing:border-box}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--flare);outline-offset:2px}
+.app{max-width:1240px;margin:0 auto;padding-block:16px 40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:14px}
+header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:10px 16px}
+.brand h1{font-family:var(--f-display);font-weight:400;font-size:clamp(26px,5vw,38px);line-height:1.1;margin:0;text-wrap:balance}
+.brand p{margin:2px 0 0;color:var(--muted);font-size:13px;max-width:60ch}
+.ctrl{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.btn{border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:7px 12px;font-size:14px}
+.btn[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.btn.primary{background:var(--flare);border-color:var(--flare);color:#fff}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg .btn{border:0;border-radius:0;padding:7px 10px}
+.clock{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:baseline;font-family:var(--f-mono);font-size:13px;color:var(--muted)}
+.clock b{font-family:var(--f-display);font-weight:400;font-size:24px;color:var(--ink)}
+.clock .ph{color:var(--flare);font-weight:500}
+.grid{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(0,1fr);gap:16px;align-items:start}
+@media (max-width:880px){.grid{grid-template-columns:minmax(0,1fr)}}
+.col{display:flex;flex-direction:column;gap:14px;min-width:0}
+.mapwrap{position:relative;border-radius:12px;overflow:hidden;background:#0b3d47;box-shadow:var(--shadow)}
+canvas#map{display:block;width:100%;height:auto;touch-action:manipulation}
+.mapnote{position:absolute;left:10px;bottom:10px;right:10px;display:flex;justify-content:space-between;gap:8px;pointer-events:none}
+.mapnote span{background:rgba(8,22,26,.72);color:#e9f1ef;font-size:12px;padding:3px 8px;border-radius:6px;font-family:var(--f-mono)}
+.now{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 14px;display:flex;flex-direction:column;gap:4px;min-height:84px}
+.now .k{font-family:var(--f-mono);font-size:11px;color:var(--flare);letter-spacing:.06em}
+.now p{margin:0;font-size:14.5px;animation:fadein .4s ease both}
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+@media (max-width:520px){.stats{gap:6px}}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 10px;min-width:0}
+.stat .k{font-size:11px;color:var(--muted);letter-spacing:.04em}
+.stat .v{font-family:var(--f-mono);font-size:18px;font-variant-numeric:tabular-nums;line-height:1.3;white-space:nowrap}
+.stat .v small{font-size:11px;color:var(--muted)}
+.stat.low .v{color:var(--bad)}
+.meter{height:4px;border-radius:2px;background:var(--chip);margin-top:4px;overflow:hidden}
+.meter i{display:block;height:100%;background:var(--sea)}
+.stat.sig .meter i{background:var(--flare)}
+.rules{display:flex;flex-wrap:wrap;gap:8px;font-size:13px}
+.pill{background:var(--chip);border-radius:999px;padding:4px 10px;display:inline-flex;gap:6px;align-items:center}
+.pill b{font-weight:400;color:var(--muted)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px;min-width:0}
+.card h2{font-family:var(--f-display);font-weight:400;font-size:19px;margin:0 0 8px;display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap}
+.card h2 small{font-family:var(--f-mono);font-size:12px;color:var(--muted)}
+.roster{display:flex;flex-direction:column;gap:2px}
+.prow{display:grid;grid-template-columns:minmax(0,1fr) 92px;gap:10px;align-items:center;padding:6px;border-radius:8px;border:0;background:none;text-align:left;width:100%}
+.prow:hover{background:var(--chip)}
+.prow[aria-current="true"]{background:var(--chip);box-shadow:inset 3px 0 0 var(--flare)}
+.prow .nm{display:flex;gap:6px;align-items:baseline;min-width:0;flex-wrap:wrap}
+.prow .nm strong{font-weight:400;font-size:15px}
+.prow .nm span{font-size:12px;color:var(--muted)}
+.prow .doing{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dot{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:2px}
+.bars{display:grid;gap:3px}
+.bar{height:5px;border-radius:3px;background:var(--chip);overflow:hidden}
+.bar i{display:block;height:100%}
+.bar.hp i{background:var(--good)}.bar.sat i{background:var(--warn)}.bar.hyd i{background:var(--sea)}
+.prow.dead{opacity:.5}.prow.dead strong{text-decoration:line-through}
+.tag{font-size:11px;padding:1px 6px;border-radius:4px;background:var(--chip);color:var(--muted)}
+.tag.bad{background:color-mix(in srgb,var(--bad) 18%,transparent);color:var(--bad)}
+.tag.lead{background:color-mix(in srgb,var(--flare) 20%,transparent);color:var(--flare)}
+.legend{display:flex;gap:10px;font-size:11px;color:var(--muted);margin-top:6px}
+.legend i{display:inline-block;width:10px;height:5px;border-radius:2px;margin-right:4px;vertical-align:middle}
+.detail{display:flex;flex-direction:column;gap:8px}
+.detail .who{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap}
+.detail .who h3{margin:0;font-family:var(--f-display);font-weight:400;font-size:22px}
+.detail .bio{color:var(--muted);font-size:13px;margin:0}
+.traits{display:flex;flex-wrap:wrap;gap:4px}
+.kv{display:grid;grid-template-columns:auto minmax(0,1fr);gap:2px 12px;font-size:13px;margin:0}
+.kv dt{color:var(--muted)}.kv dd{margin:0;font-variant-numeric:tabular-nums}
+.reclist{margin:0;padding:0;list-style:none;font-size:13px;display:flex;flex-direction:column;gap:3px;max-height:180px;overflow:auto}
+.reclist li span{font-family:var(--f-mono);color:var(--muted);font-size:11px;margin-right:6px}
+.tabs{display:flex;gap:4px}
+.tabs .btn{padding:3px 9px;font-size:12px}
+.journal{max-height:460px;overflow:auto;display:flex;flex-direction:column;gap:4px;font-size:13.5px}
+.journal .e{display:grid;grid-template-columns:40px minmax(0,1fr);gap:8px}
+.journal .e .t{font-family:var(--f-mono);font-size:11px;color:var(--muted);padding-top:2px}
+.journal .e.life .m{color:var(--muted)}
+.journal .e.death{color:var(--bad)}.journal .e.find{color:var(--sea)}.journal .e.pol .m{font-weight:600}
+.journal .e.good{color:var(--good)}.journal .e.rescue{color:var(--flare);font-weight:600}.journal .e.bad .m{color:var(--bad)}
+.journal .e.choice .m{color:var(--flare)}
+.journal .day{font-family:var(--f-display);font-size:15px;margin-top:6px;border-top:1px dashed var(--line);padding-top:6px}
+.muted{color:var(--muted)}
+.ov{position:fixed;inset:0;z-index:50;background:rgba(6,16,20,.62);display:flex;align-items:center;justify-content:center;padding:calc(16px + env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) calc(16px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));overflow:auto}
+.sheet{background:var(--panel);color:var(--ink);border-radius:14px;box-shadow:var(--shadow);width:min(640px,100%);max-height:100%;overflow:auto;padding:18px 18px 16px;display:flex;flex-direction:column;gap:12px}
+.sheet .eb{font-family:var(--f-mono);font-size:12px;color:var(--flare);letter-spacing:.06em}
+.sheet h2{font-family:var(--f-display);font-weight:400;font-size:clamp(22px,4.5vw,30px);margin:0;line-height:1.2;text-wrap:balance}
+.situ{margin:0;font-size:15.5px;max-width:60ch}
+.status{font-family:var(--f-mono);font-size:12px;color:var(--muted)}
+.opts{display:flex;flex-direction:column;gap:8px}
+.opt{border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:10px 12px;text-align:left;display:flex;justify-content:space-between;gap:10px;align-items:baseline;flex-wrap:wrap;transition:border-color .15s,transform .15s}
+.opt:hover{border-color:var(--flare);transform:translateX(2px)}
+.opt b{font-weight:400;font-family:var(--f-display);font-size:18px}
+.opt span{font-family:var(--f-mono);font-size:11.5px;color:var(--flare)}
+.row{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:center}
+.scene{min-height:180px;display:flex;flex-direction:column;gap:8px;font-size:15.5px}
+.scene p{margin:0;animation:fadein .35s ease both}
+.scene p.hl{color:var(--flare)}
+@keyframes fadein{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+.ending .slide-body{display:flex;flex-direction:column;gap:10px;font-size:15.5px;max-width:62ch}
+.ending .slide-body p{margin:0}
+.dots{display:flex;gap:4px;flex-wrap:wrap}
+.dots i{width:7px;height:7px;border-radius:50%;background:var(--line)}
+.dots i.on{background:var(--flare)}
+.ending .portrait{display:flex;gap:10px;align-items:center}
+.ending .fate{font-family:var(--f-mono);font-size:12px;padding:2px 8px;border-radius:4px}
+.fate.alive{background:color-mix(in srgb,var(--good) 18%,transparent);color:var(--good)}
+.fate.dead{background:color-mix(in srgb,var(--bad) 18%,transparent);color:var(--bad)}
+@media (prefers-reduced-motion:reduce){.scene p,.now p{animation:none}.opt{transition:none}}
+</style>
+
+<div class="app">
+  <header>
+    <div class="brand">
+      <h1>표류자들의 섬</h1>
+      <p>투어 보트가 침몰했다. 14명이 이름 없는 섬에 떠밀려 왔다. 섬은 알아서 굴러가고, 뭔가 터지면 당신이 고른다.</p>
+    </div>
+    <div class="ctrl">
+      <button class="btn" id="play" aria-pressed="false">일시정지</button>
+      <div class="seg" role="group" aria-label="속도">
+        <button class="btn" id="sp1" aria-pressed="true">1×</button>
+        <button class="btn" id="sp3" aria-pressed="false">3×</button>
+        <button class="btn" id="sp10" aria-pressed="false">10×</button>
+      </div>
+      <button class="btn" id="reset">새 섬</button>
+    </div>
+  </header>
+  <div class="clock" id="clock"></div>
+  <div class="grid">
+    <div class="col">
+      <div class="mapwrap">
+        <canvas id="map" width="800" height="560" aria-label="섬 지도"></canvas>
+        <div class="mapnote"><span id="mapPhase"></span><span id="mapWeather"></span></div>
+      </div>
+      <div class="now" id="now" aria-live="polite"></div>
+      <div class="stats" id="stats"></div>
+      <div class="rules" id="rules"></div>
+      <div class="card"><div class="detail" id="detail"></div></div>
+    </div>
+    <div class="col">
+      <div class="card">
+        <h2>생존자 명단 <small id="aliveCount"></small></h2>
+        <div class="roster" id="roster"></div>
+        <div class="legend"><span><i style="background:var(--good)"></i>체력</span><span><i style="background:var(--warn)"></i>포만</span><span><i style="background:var(--sea)"></i>수분</span></div>
+      </div>
+      <div class="card">
+        <h2>항해일지 <span class="tabs" role="group" aria-label="일지 보기"><button class="btn" id="jAll" aria-pressed="true">전부</button><button class="btn" id="jBig" aria-pressed="false">큰 일만</button></span></h2>
+        <div class="journal" id="journal"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="ov" id="ovEvent" hidden><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="evTitle">
+  <div class="eb" id="evEb"></div>
+  <h2 id="evTitle"></h2>
+  <p class="situ" id="evText"></p>
+  <div class="status" id="evStatus"></div>
+  <div class="opts" id="evOpts"></div>
+  <div class="row"><span class="muted" style="font-size:12px">고르지 않으면 섬은 멈춘 채 기다린다.</span><button class="btn" id="autoPick">섬 사람들에게 맡긴다</button></div>
+</div></div>
+
+<div class="ov" id="ovScene" hidden><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sceneTitle">
+  <div class="eb" id="sceneEb"></div>
+  <h2 id="sceneTitle"></h2>
+  <div class="scene" id="scene" aria-live="polite"></div>
+  <div class="row"><button class="btn" id="sceneSkip">바로 보기</button><button class="btn primary" id="sceneDone" hidden>섬으로 돌아간다</button></div>
+</div></div>
+
+<div class="ov" id="ovEnd" hidden><div class="sheet ending" role="dialog" aria-modal="true" aria-labelledby="endTitle">
+  <div class="eb" id="endEb"></div>
+  <h2 id="endTitle"></h2>
+  <div class="slide-body" id="endBody"></div>
+  <div class="dots" id="endDots"></div>
+  <div class="row"><button class="btn" id="endPrev">이전</button><div class="ctrl"><button class="btn" id="endNew">새 섬에서 다시</button><button class="btn primary" id="endNext">다음</button></div></div>
+</div></div>
+
+<script id="core">
+(function(G){
+"use strict";
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+let rnd=Math.random;
+const r=()=>rnd(), ri=(a,b)=>a+Math.floor(r()*(b-a+1)), pick=a=>a[Math.floor(r()*a.length)], chance=p=>r()<p;
+const clamp=(v,a,b)=>v<a?a:v>b?b:v, f1=v=>(Math.round(v*10)/10).toFixed(1);
+function shuffle(a){for(let i=a.length-1;i>0;i--){const k=Math.floor(r()*(i+1));[a[i],a[k]]=[a[k],a[i]]}return a}
+function hasB(w){const c=w.charCodeAt(w.length-1);if(c<0xAC00||c>0xD7A3)return false;return (c-0xAC00)%28!==0}
+function isRieul(w){const c=w.charCodeAt(w.length-1);return c>=0xAC00&&c<=0xD7A3&&(c-0xAC00)%28===8}
+function j(w,pair){const [a,b]=pair.split('/');if(pair==='으로/로')return w+(hasB(w)&&!isRieul(w)?'으로':'로');return w+(hasB(w)?a:b)}
+const names=ps=>ps.map(p=>p.name).join('·');
+const jn=(ps,pair)=>{if(!ps.length)return '아무도';const n=ps.map(p=>p.name);const last=n.pop();return (n.length?n.join('·')+'·':'')+j(last,pair)};
+const crowd=(ps,pair)=>ps.length>3?`${ps[0].name}·${ps[1].name} 등 ${ps.length}명`+(pair==='이/가'?'이':pair==='을/를'?'을':''):jn(ps,pair);
+const wa=(p)=>p.name+(hasB(p.name)?'과':'와');
+
+const ROSTER=[
+ {name:'강도윤',job:'어부',bio:'남해에서 30년 배를 탔다. 말수가 적다.',sk:{fish:.35}},
+ {name:'서하은',job:'간호사',bio:'응급실 3교대를 하다 휴가를 왔다.',sk:{heal:.55},nurse:true},
+ {name:'박정호',job:'목수',bio:'손으로 하는 일이라면 뭐든 한다.',sk:{build:.35}},
+ {name:'이수아',job:'등산가',bio:'히말라야 원정을 두 번 다녀왔다.',sk:{explore:.35},t:{stamina:.2}},
+ {name:'최민재',job:'요리사',bio:'호텔 주방 부주방장. 칼을 잃어버린 게 아쉽다.',sk:{gather:.2,fish:.1}},
+ {name:'한영수',job:'은퇴한 선장',bio:'일흔이 넘었다. 바다 냄새로 날씨를 읽는다.',sk:{signal:.4},t:{stamina:-.25},captain:true},
+ {name:'오지훈',job:'부사관 출신',bio:'전역한 지 2년. 아직도 새벽 5시에 깬다.',sk:{explore:.2,fish:.15},t:{brave:.25,stamina:.2}},
+ {name:'윤채린',job:'여행 유튜버',bio:'카메라는 바다에 빠졌고 휴대폰만 남았다. 구독자 41만.',sk:{},t:{charisma:.3},phone:true},
+ {name:'장태식',job:'보험설계사',bio:'처음 보는 사람과도 금방 형님 동생 한다.',sk:{},t:{charisma:.25,greed:.15}},
+ {name:'문가영',job:'초등학교 교사',bio:'다툼이 생기면 일단 둘을 앉혀 놓는다.',sk:{heal:.1},t:{empathy:.25}},
+ {name:'백승우',job:'프로그래머',bio:'와이파이 없는 날은 태어나 처음이다. 두꺼운 안경을 썼다.',sk:{build:.1},t:{stamina:-.1},glasses:true},
+ {name:'임소연',job:'식물학 대학원생',bio:'열대 식물로 논문을 쓰고 있다.',sk:{gather:.35},botanist:true},
+ {name:'정만석',job:'건설현장 반장',bio:'목소리가 크고 일을 나누는 데 익숙하다.',sk:{build:.25},t:{charisma:.15,temper:.2}},
+ {name:'노은비',job:'회계사',bio:'숫자가 안 맞으면 잠을 못 잔다.',sk:{},t:{coop:.15},accountant:true}
+];
+const ZONES={
+ camp:{name:'해변 캠프',x:.50,y:.80},sea:{name:'얕은 바다',x:.33,y:.93},palm:{name:'야자숲',x:.22,y:.62},
+ jungle:{name:'정글',x:.50,y:.52},hill:{name:'바위 언덕',x:.74,y:.33},
+ spring:{name:'숨은 샘',x:.46,y:.30,hidden:true},cave:{name:'동굴',x:.25,y:.34,hidden:true},
+ wreck:{name:'난파선 잔해',x:.86,y:.64,hidden:true},north:{name:'북쪽 해변',x:.54,y:.13,hidden:true}
+};
+const ACTS={fish:'낚시',palm:'야자 따기',forage:'열매 채집',water:'물 구하기',wood:'장작 모으기',build:'쉼터 짓기',signal:'신호불 관리',explore:'탐험',rest:'휴식',heal:'환자 돌보기',eat:'저녁 식사',sleep:'잠'};
+const RULES={none:'정해진 규칙 없음',equal:'균등 배급',work:'일한 만큼',leader:'지도자 재량'};
+const PH=['오전','오후','저녁','밤'];
+
+let S=null;
+const isl=()=>S.people.filter(p=>p.alive&&!p.away);
+const act=()=>S.people.filter(p=>p.alive&&!p.away&&!p.exiled);
+const exl=()=>S.people.filter(p=>p.alive&&!p.away&&p.exiled);
+const best=(arr,f)=>arr.reduce((b,p)=>f(p)>f(b)?p:b,arr[0]);
+const P=id=>S.people[id];
+const findP=f=>act().find(f);
+function log(t,k){S.log.push({d:S.day,ph:S.phase,t,k:k||''});if(S.log.length>700)S.log.splice(0,S.log.length-700)}
+function life(t){log(t,'life')}
+function bub(p,t){if(p)S.bub.push({id:p.id,t})}
+function rec(p,t,w){p.rec.push({d:S.day,t,w:w||1})}
+function rel(a,b,d){if(a===b)return;a.rel[b.id]=clamp(a.rel[b.id]+d,-100,100)}
+function mutual(a,b,d){rel(a,b,d);rel(b,a,d)}
+function leader(){return S.leader!=null&&P(S.leader).alive&&!P(S.leader).away&&!P(S.leader).exiled?P(S.leader):null}
+function avgRel(p){const o=act().filter(x=>x!==p);if(!o.length)return 0;return o.reduce((s,x)=>s+x.rel[p.id],0)/o.length}
+
+function mkPerson(i,d){
+  const t={coop:r(),greed:r(),brave:r(),stamina:.35+r()*.55,charisma:r()*.85,temper:r()*.9,empathy:r()};
+  t.empathy=clamp(t.empathy*.7+(1-t.greed)*.3,0,1);
+  if(d.t)for(const k in d.t)t[k]=clamp(t[k]+d.t[k],.05,1);
+  const sk={fish:.2+r()*.3,gather:.25+r()*.3,build:.2+r()*.3,explore:.2+r()*.3,heal:.05+r()*.2,signal:.15+r()*.3};
+  for(const k in d.sk)sk[k]=clamp(sk[k]+d.sk[k],0,1);
+  const z=ZONES.camp;
+  return Object.assign({id:i,name:d.name,job:d.job,bio:d.bio,t,sk,sat:72,hyd:66,hp:100,mor:60,sick:0,inj:0,alive:true,away:false,exiled:false,exileDay:0,
+    stash:{food:0,water:0},rel:new Array(ROSTER.length).fill(0).map(()=>Math.round((r()-.5)*10)),
+    act:'rest',zone:'camp',x:z.x+(r()-.5)*.12,y:z.y+(r()-.5)*.06,tx:z.x,ty:z.y,contrib:0,dayContrib:0,lastGain:0,ateF:0,ateW:0,noFood:false,
+    rec:[],st:{shared:0,stole:0,caught:0,found:[],leaderDays:0,built:0,fished:0,healed:0,signal:0,raft:false,votedOut:false,proposed:0},death:null},
+    {captain:!!d.captain,botanist:!!d.botanist,accountant:!!d.accountant,nurse:!!d.nurse,phone:!!d.phone,glasses:!!d.glasses});
+}
+
+function newGame(seed){
+  rnd=mulberry32(seed>>>0);
+  S={seed,day:1,phase:0,people:ROSTER.map((d,i)=>mkPerson(i,d)),food:5,water:5,wood:2,shelter:8,signal:0,signalFloor:0,fire:true,tools:0,medicine:1,
+    discovered:{camp:true,sea:true,palm:true,jungle:true,hill:true,spring:false,cave:false,wreck:false,north:false},
+    stocks:{fish:100,palm:100,fruit:100},fishMax:100,rule:'none',ruleHist:[{d:1,rule:'none'}],leader:null,leaderSince:0,leaderHist:[],
+    weather:'맑음',next:pick(['맑음','맑음','흐림','폭염']),log:[],choices:[],flags:{},rationMul:1,rationDays:0,watchDays:0,quarantineDays:0,boilDays:0,
+    signalNight:false,rescueIn:-1,ended:false,endType:null,endHow:null,thieves:[],evLast:{},evCool:1,bub:[],gain:{food:0,water:0,wood:0},menu:{},missed:0,bottles:0,
+    tonight:null,noSeaDay:0,siestaDay:0,waterHalfDay:0,badFoodDay:0,pit:0,noLeaderUntil:0,lastDeath:0,mourned:0,now:[]};
+  S.people.forEach(p=>{for(const o of S.people)if(o!==p&&chance(.12))p.rel[o.id]+=ri(8,18)});
+  log('투어 보트가 암초에 부딪혀 가라앉았다. 14명이 이름 모를 섬의 해변에 닿았다.','pol');
+  log('건져 낸 것은 과자 몇 봉지, 생수 다섯 병, 구급상자 하나. 구조 신호를 보낼 방법은 없다.');
+  S.now=['해변에 떠밀려 온 사람들이 젖은 옷을 짜고 있다.','누군가 휴대폰을 흔들어 보지만 아무것도 켜지지 않는다.'];
+  return S;
+}
+
+/* ---------- 일하기 ---------- */
+function eff(p,k){return p.sk[k]*(0.55+0.45*p.hp/100)*(p.inj>0?.5:1)*(p.sick>0?.4:1)}
+function waterSource(){return S.discovered.spring?'spring':(S.flags.well?'well':null)}
+function rainy(){return S.weather==='비'||S.weather==='폭풍'}
+function give(p,k,a){if(!(a>0))return;S.gain[k]=(S.gain[k]||0)+a;p.contrib+=a;p.lastGain+=a;if(k!=='wood'&&(S.rule==='none'||p.exiled))p.stash[k]+=a;else S[k]+=a}
+function hidden(){return Object.keys(ZONES).filter(z=>!S.discovered[z])}
+function sickCount(){return isl().filter(p=>p.sick>0).length}
+
+function scoreActs(p,forIsland){
+  const n=Math.max(1,act().length);
+  const communal=S.rule!=='none'&&!p.exiled;
+  const fN=forIsland?clamp(1-S.food/(n*1.6),0,1):clamp(((100-p.sat)/100)*.6+(communal?clamp(1-S.food/(n*1.6),0,1)*.5:clamp(1-p.stash.food/2,0,1)*.5),0,1.2);
+  const wN=forIsland?clamp(1-S.water/(n*1.6),0,1):clamp(((100-p.hyd)/100)*.7+(communal?clamp(1-S.water/(n*1.6),0,1)*.5:clamp(1-p.stash.water/2,0,1)*.5),0,1.3);
+  const ws=waterSource(),sc={},storm=S.weather==='폭풍';
+  sc.fish=S.noSeaDay===S.day?0:fN*(.45+p.sk.fish)*(storm?.25:1)*clamp(S.stocks.fish/80,.35,1.1);
+  sc.forage=fN*(.35+p.sk.gather)*.85*clamp(S.stocks.fruit/80,.3,1.1);
+  sc.palm=(fN*.45+wN*.85)*(.35+p.sk.gather)*clamp(S.stocks.palm/80,.25,1.1);
+  sc.water=wN*(ws?1.35:(rainy()?1.5:.15));
+  if(p.exiled){sc.wood=sc.build=sc.signal=sc.heal=sc.explore=0;sc.rest=(100-p.hp)/100*.7+r()*.1;return sc}
+  sc.wood=(S.wood<3?.55:S.wood<8?.3:.1)*(.6+p.t.coop*.4);
+  sc.build=(S.shelter<70?(1-S.shelter/100)*.55:.04)*(.35+p.sk.build);
+  sc.signal=(S.day>=2?(1-S.signal/100)*.5:.05)*(.3+p.sk.signal)*(S.wood>=1?1:.35)*(.6+p.t.coop*.5);
+  const h=hidden();
+  sc.explore=h.length?(.12+p.t.brave*.4+(!ws&&wN>.4?.35:0))*(.35+p.sk.explore)*(storm?.3:1):0;
+  sc.heal=sickCount()>0?(p.sk.heal+p.t.empathy*.4)*.9:0;
+  sc.rest=(100-p.hp)/100*.8+(1-p.t.stamina)*.12+(p.mor<30?.2:0)+(S.siestaDay===S.day&&S.phase===1?1.2:0);
+  if(!forIsland&&communal)sc.rest+=p.t.greed*(1-p.t.coop)*.38+(p.lazy?.3:0);
+  return sc;
+}
+function chooseAct(p,cnt){
+  if(p.hp<28||(p.sick>0&&chance(.7)))return 'rest';
+  const L=leader();let forIsland=false;
+  if(L&&L!==p&&!p.exiled&&(p.rel[L.id]>8||p.t.coop>.65)&&chance(.55+p.t.coop*.3))forIsland=true;
+  if(L===p&&chance(.5))forIsland=true;
+  p.ordered=forIsland&&L&&L!==p;
+  const sc=scoreActs(p,forIsland);
+  let bk='rest',bv=-1;for(const k in sc){const v=sc[k]+r()*.22-(cnt&&(k==='water'||k==='explore'||k==='signal'||k==='heal')?(cnt[k]||0)*.05:0);if(v>bv){bv=v;bk=k}}
+  return bk;
+}
+function campZone(){return S.flags.cave?'cave':'camp'}
+function zoneOf(p,a){
+  if(a==='water')return waterSource()==='spring'?'spring':'camp';
+  if(a==='explore'){const h=hidden();return h.length?pick(h):'jungle'}
+  const m={fish:S.discovered.north&&chance(.35)?'north':'sea',palm:'palm',forage:'jungle',wood:'jungle',build:campZone(),signal:'hill',rest:campZone(),heal:campZone()};
+  let z=m[a]||'camp';if(p.exiled&&a==='rest')z=S.discovered.north?'north':'palm';return z;
+}
+function doAct(p){
+  const a=p.act,w=S.weather,wm=w==='폭풍'?.25:w==='비'?.7:w==='폭염'?.85:1;p.lastGain=0;
+  if(a==='fish'){
+    const e=eff(p,'fish');const f=(.5+1.45*e)*wm*(S.flags.trap?1.4:1)*(S.tools>0?1.15:1)*clamp(S.stocks.fish/S.fishMax,.3,1);
+    S.stocks.fish=Math.max(0,S.stocks.fish-f*1.3);give(p,'food',f);p.st.fished+=f;S.menu.fish=1;
+    if(f>1.3)bub(p,`물고기 ${Math.round(f*2.5)}마리!`);
+    if(w==='폭풍'&&chance(.12)){p.inj=ri(3,6);log(`${j(p.name,'이/가')} 거친 파도에 바위로 떠밀려 다쳤다.`,'bad');rec(p,'폭풍 속에 낚시를 하다 다쳤다',2);bub(p,'으악!')}
+  }else if(a==='palm'){
+    const e=eff(p,'gather'),k=clamp(S.stocks.palm/80,.25,1);give(p,'food',(.35+.5*e)*k);give(p,'water',(.4+.7*e)*k);S.stocks.palm=Math.max(0,S.stocks.palm-3.2);S.menu.palm=1;
+    if(chance(.025)){p.inj=ri(2,5);log(`${j(p.name,'이/가')} 야자나무에서 미끄러져 발목을 다쳤다.`,'bad');bub(p,'발목이…')}
+  }else if(a==='forage'){
+    const e=eff(p,'gather'),k=clamp(S.stocks.fruit/80,.3,1);give(p,'food',(.45+1.0*e)*k*(S.flags.fruitOk?1.25:.75));S.stocks.fruit=Math.max(0,S.stocks.fruit-3);S.menu.fruit=1;
+    if(!S.flags.fruitOk&&!p.botanist&&chance(.06)){p.sick=ri(2,4);log(`${j(p.name,'이/가')} 낯선 열매를 먹고 배를 움켜쥐었다.`,'bad');bub(p,'배가…')}
+  }else if(a==='water'){
+    const e=eff(p,'gather'),ws=waterSource();let v;
+    if(rainy())v=1.2+(S.flags.catcher?1.3:0)+(ws==='spring'?.6:0);
+    else if(ws==='spring')v=1.0+1.0*e;else if(ws==='well')v=.55+.3*e;else v=.12;
+    give(p,'water',v);if(v<.3)bub(p,'물이 없어…');
+  }else if(a==='wood'){give(p,'wood',(.8+1.4*eff(p,'build'))*(w==='폭풍'?.4:1)*(S.tools>0?1.2:1));}
+  else if(a==='build'){const e=eff(p,'build');if(S.wood>=1){S.wood-=1;S.shelter=clamp(S.shelter+6+11*e*(S.tools>0?1.25:1),0,100);p.st.built++}else S.shelter=clamp(S.shelter+1.5,0,100);p.contrib+=1}
+  else if(a==='signal'){const e=eff(p,'signal');if(S.wood>=1){S.wood-=1;S.signal=clamp(S.signal+8+13*e,0,100)}else S.signal=clamp(S.signal+2.5,0,100);p.st.signal++;p.contrib+=1}
+  else if(a==='explore'){
+    const e=eff(p,'explore'),h=hidden();p.contrib+=.6;
+    if(h.length&&chance(.16+.38*e+p.t.brave*.08)){
+      const wts=h.map(z=>z==='spring'?(waterSource()?1:3.2):z==='wreck'?1.4:1);let x=r()*wts.reduce((a,b)=>a+b,0),zz=h[0];
+      for(let i=0;i<h.length;i++){x-=wts[i];if(x<=0){zz=h[i];break}}
+      discover(zz,p);
+    }
+    if(chance(.05+(w==='폭풍'?.08:0))){p.inj=ri(2,5);log(`${j(p.name,'이/가')} 탐험 중 비탈에서 굴러 다쳤다.`,'bad');rec(p,'탐험 중에 다쳤다',1)}
+  }else if(a==='heal'){
+    const sick=isl().filter(x=>x.sick>0&&x!==p);
+    for(const s of sick.slice(0,2)){if(chance(.25+p.sk.heal*.6)){s.sick=Math.max(0,s.sick-2);rel(s,p,6);p.st.healed++}}
+    if(sick.length){p.contrib+=1;p.healedWho=sick[0]}
+  }else if(a==='rest'){p.hp=clamp(p.hp+3,0,100)}
+  if(a!=='rest')p.hp=clamp(p.hp-(1.2-p.t.stamina),0,100);
+  p.dayContrib+=p.contrib;
+}
+function discover(z,p){
+  if(S.discovered[z])return false;S.discovered[z]=true;const nm=ZONES[z].name;
+  const who=p?`${j(p.name,'이/가')} `:'';
+  const msg={spring:`${who}바위 틈에서 맑은 물이 솟는 샘을 찾았다. 섬에서 가장 큰 소식이다.`,
+    cave:`${who}서늘하고 마른 동굴을 찾았다. 비바람을 피할 수 있을 것 같다.`,
+    wreck:`${who}동쪽 암초에 걸린 낡은 화물선 잔해를 찾았다. 안에 뭔가 남아 있을지 모른다.`,
+    north:`${who}섬 반대편의 북쪽 해변을 찾았다. 물고기가 많고 수평선이 훤히 보인다.`}[z];
+  log(msg,'find');if(p)bub(p,`${nm} 발견!`);
+  if(z==='north'){S.fishMax=150;S.stocks.fish+=50}
+  if(p){p.st.found.push(nm);rec(p,`${j(nm,'을/를')} 처음 발견했다`,3);for(const o of act())rel(o,p,z==='spring'?8:3);p.mor+=10}
+  return true;
+}
+
+/* ---------- 사회 ---------- */
+function social(){
+  const ps=act();if(ps.length<2)return;
+  const k=Math.ceil(ps.length/3);
+  for(let i=0;i<k;i++){
+    const a=pick(ps),b=pick(ps);if(a===b)continue;
+    const near=a.zone===b.zone;
+    if(a.stash.food>1.4&&b.sat<45&&(a.t.empathy+a.rel[b.id]/100)>.72){
+      const g=Math.min(.8,a.stash.food-1);a.stash.food-=g;b.stash.food+=g;mutual(a,b,10);rel(b,a,6);a.st.shared++;
+      log(`${j(a.name,'이/가')} 배고파하는 ${b.name}에게 자기 몫을 덜어 주었다.`,'good');rec(a,`굶주린 ${b.name}에게 먹을 것을 나눴다`,1);bub(a,'이거 먹어');
+    }else if(a.sat<45&&a.t.greed>.55&&(b.stash.food>1||b.stash.water>1)&&chance(a.t.greed*.55)){
+      const k2=b.stash.food>1?'food':'water';const g=Math.min(1,b.stash[k2]*.5);b.stash[k2]-=g;a.stash[k2]+=g;a.st.stole++;
+      const what=k2==='food'?'먹을 것':'물';
+      if(chance(.35+(S.watchDays>0?.35:0))){a.st.caught++;rel(b,a,-30);for(const o of ps)if(o!==a&&o!==b&&chance(.4))rel(o,a,-8);S.thieves.push({id:a.id,d:S.day,what});
+        log(`${j(a.name,'이/가')} ${b.name}의 ${j(what,'을/를')} 훔치다 들켰다.`,'bad');rec(a,`${b.name}의 ${j(what,'을/를')} 훔치다 들켰다`,3);bub(b,'도둑이야!');
+        if(b.t.temper>.6&&chance(.35)){const loser=chance(.5)?a:b;loser.inj=ri(2,4);log(`둘 사이에 몸싸움이 났다. ${j(loser.name,'이/가')} 다쳤다.`,'bad')}
+      }else rec(a,`몰래 ${b.name}의 ${j(what,'을/를')} 가져갔다`,2);
+    }else if((a.t.temper>.62||a.mor<25)&&chance(.3)){
+      mutual(a,b,-ri(6,14));if(chance(.5)){log(`${wa(a)} ${b.name} 사이에 언성이 높아졌다.`,'soc');bub(a,'뭐라고?')}
+    }else{
+      mutual(a,b,near?ri(3,7):ri(1,4));
+      if(chance(.28)){const c=pick(ps);if(c!==a&&c!==b&&a.rel[c.id]<-12){rel(b,c,-6);if(chance(.4))log(`${j(a.name,'이/가')} ${b.name}에게 ${c.name} 험담을 했다.`,'soc')}}
+    }
+  }
+  for(const p of ps){if(p.hyd<22&&chance(.3))bub(p,'목말라…');else if(p.sat<22&&chance(.3))bub(p,'배고파…')}
+}
+function skim(){
+  if(S.rule==='none')return;
+  for(const p of act()){
+    if(chance(p.t.greed*(1-p.t.coop)*.28*(p.sat<50?1.5:1))){
+      const k=S.water>1.5&&p.hyd<p.sat?'water':'food';if(S[k]<1.2)continue;
+      S[k]-=.6;p.stash[k]+=.6;p.st.stole++;const what=k==='food'?'공동 식량':'공동 물';
+      if(chance(.18+(S.watchDays>0?.4:0)+(S.flags.ledger?.25:0))){
+        p.st.caught++;for(const o of act())if(o!==p)rel(o,p,-12);S.thieves.push({id:p.id,d:S.day,what});
+        log(`${j(p.name,'이/가')} ${j(what,'을/를')} 몰래 챙기다 들켰다.`,'bad');rec(p,`${j(what,'을/를')} 빼돌리다 들켰다`,3);
+      }else{if(k==='water')S.flags.waterMissing=p.id;rec(p,`아무도 모르게 ${j(what,'을/를')} 빼돌렸다`,2)}
+    }
+  }
+}
+function support(c){let s=c.t.charisma*2.2;for(const o of act())if(o!==c)s+=Math.max(0,o.rel[c.id])/22;s+=c.st.found.length*.6;return s}
+function setLeader(p,how){
+  const prev=leader();S.leader=p?p.id:null;S.leaderSince=S.day;
+  if(p){S.leaderHist.push({d:S.day,id:p.id,how});rec(p,how==='vote'?'사람들의 선택으로 지도자가 됐다':how==='coup'?'불신임 끝에 지도자 자리를 넘겨받았다':'자연스럽게 섬의 지도자가 됐다',3)}
+  if(prev&&prev!==p)rec(prev,'지도자 자리에서 내려왔다',2);
+}
+function politics(){
+  const ps=act();if(ps.length<3)return;
+  const L=leader();
+  if(!L&&S.day>=2&&S.day>=S.noLeaderUntil){
+    const c=best(ps,support);
+    if(support(c)>=3.2+ps.length*.18&&chance(.35)){setLeader(c,'natural');log(`누가 정한 것도 아닌데 사람들이 ${c.name}의 말을 따르기 시작했다.`,'pol')}
+  }else if(L&&S.day-S.leaderSince>=2){
+    const unhappy=ps.filter(o=>o!==L&&o.rel[L.id]<-8).length/(ps.length-1);
+    if(unhappy>.45&&chance(.4)){
+      const ch=best(ps.filter(o=>o!==L),support);let yes=0;
+      for(const v of ps){if(v===L)continue;if(v.rel[L.id]+r()*10<v.rel[ch.id])yes++}
+      log(`${j(ch.name,'이/가')} ${L.name}에게 물러나라고 했다. 즉석에서 손을 들어 보기로 했다.`,'pol');
+      if(yes>(ps.length-1)/2){setLeader(ch,'coup');log(`${ps.length-1}명 중 ${yes}명이 손을 들었다. ${j(ch.name,'이/가')} 새 지도자가 됐다.`,'pol');rel(L,ch,-30)}
+      else{log(`손을 든 사람은 ${yes}명. ${j(L.name,'은/는')} 자리를 지켰다.`,'pol');rel(L,ch,-25)}
+    }
+  }
+  if(S.day>=2&&chance(.08)&&!S.flags.propCool&&S.day-S.ruleHist[S.ruleHist.length-1].d>=3){
+    const pr=best(ps,x=>x.t.charisma+r()*.6);let want;
+    if(leader()===pr&&S.rule!=='leader'&&chance(.55))want='leader';
+    else if(pr.t.empathy>.6)want='equal';
+    else if(pr.t.greed>.6&&pr.t.coop<.45)want=pr.stash.food>1?'none':'work';
+    else want=pr.sk.fish+pr.sk.gather>.9?'work':'equal';
+    if(want===S.rule)return;
+    S.flags.propCool=true;pr.st.proposed++;
+    const res=vote(want,pr);
+    log(`${j(pr.name,'이/가')} '${RULES[want]}'${want==='none'?'으로 돌아가자':'로 하자'}고 했다. 찬성 ${res.yes}, 반대 ${res.no}.`,'pol');
+    if(res.yes>res.no){setRule(want);log(`이제부터 섬의 규칙은 '${RULES[want]}'이다.`,'pol');rec(pr,`'${RULES[want]}' 규칙을 제안해 통과시켰다`,2)}
+  }
+}
+function voteScore(v,rule,pr){
+  let s=0;const weak=v.hp<55||v.sick>0||v.inj>0;const strong=v.sk.fish+v.sk.gather+v.sk.build>1.1;
+  if(rule==='equal')s+=(weak?.5:0)+v.t.empathy*.5-(strong?.25:0)+v.t.coop*.2;
+  if(rule==='work')s+=(strong?.45:-.2)+(weak?-.4:0)+(1-v.t.empathy)*.25;
+  if(rule==='leader'){const L=leader();s+=L?(v.rel[L.id]/60+v.t.coop*.3-.35):-1}
+  if(rule==='none')s+=v.t.greed*.5+(v.stash.food>1?.3:-.2)-v.t.coop*.4;
+  if(pr&&pr!==v)s+=v.rel[pr.id]/120;if(pr===v)s+=1;
+  return s+(r()-.5)*.3;
+}
+function vote(rule,pr){let yes=0,no=0;for(const v of act())(voteScore(v,rule,pr)>.05?yes++:no++);return{yes,no}}
+function setRule(rule){
+  if(rule!=='none'&&S.rule==='none'){for(const p of act()){const fz=p.stash.food*.5,wz=p.stash.water*.5;S.food+=fz;S.water+=wz;p.stash.food-=fz;p.stash.water-=wz}}
+  S.rule=rule;S.ruleHist.push({d:S.day,rule});
+}
+
+/* ---------- 생활 장면 ---------- */
+const AMB=[
+ p=>p.job==='요리사'&&S.menu.fish&&`${j(p.name,'이/가')} 생선 내장을 빼고 바닷물로 간을 맞췄다.`,
+ p=>p.captain&&`${j(p.name,'은/는')} 바위에 앉아 한참 동안 바다 색을 읽었다.`,
+ p=>p.phone&&`${j(p.name,'이/가')} 젖은 휴대폰을 햇볕에 말리며 혼잣말로 브이로그를 찍었다.`,
+ p=>p.job==='초등학교 교사'&&`${j(p.name,'이/가')} 모래에 섬 지도를 그려 놓고 오늘 갈 곳을 나눴다.`,
+ p=>p.glasses&&`${j(p.name,'은/는')} 나뭇가지로 모래에 날짜를 새겼다. 선이 ${S.day}개다.`,
+ p=>p.accountant&&`${j(p.name,'이/가')} 조개껍데기로 남은 식량을 세어 두었다.`,
+ p=>p.job==='등산가'&&`${j(p.name,'이/가')} 가장 높은 바위에 올라 섬의 생김새를 눈에 담았다.`,
+ p=>p.job==='목수'&&`${j(p.name,'이/가')} 덩굴을 갈라 밧줄을 꼬았다. 손이 빠르다.`,
+ p=>p.job==='부사관 출신'&&`${j(p.name,'이/가')} 해 뜨기 전에 해변을 따라 뛰었다.`,
+ p=>p.job==='보험설계사'&&`${j(p.name,'이/가')} 사람들을 돌며 뭍에 나가면 한턱내겠다는 약속을 받아 냈다.`,
+ p=>p.botanist&&`${j(p.name,'이/가')} 잎사귀를 하나씩 따서 냄새를 맡고 이름을 붙였다.`,
+ p=>p.nurse&&p.healedWho&&p.healedWho.alive&&`${j(p.name,'이/가')} ${p.healedWho.name}의 이마에 젖은 천을 올려 주었다.`,
+ p=>p.job==='건설현장 반장'&&`${j(p.name,'이/가')} 큰 소리로 오늘 할 일을 외쳤다. 반은 듣는 척만 했다.`,
+ p=>p.hyd<30&&`${j(p.name,'은/는')} 입술이 갈라져 말을 아꼈다.`,
+ p=>p.sat<30&&`${j(p.name,'은/는')} 배가 고파 자꾸 빈 코코넛 껍데기를 긁었다.`,
+ p=>p.sick>0&&`${j(p.name,'이/가')} 그늘에서 식은땀을 흘리며 누워 있었다.`,
+ p=>p.mor<30&&`${j(p.name,'은/는')} 혼자 물가에 앉아 수평선만 바라봤다.`,
+ p=>p.mor>75&&`${j(p.name,'이/가')} 흥얼거리며 일했다.`,
+ p=>p.inj>0&&`${j(p.name,'이/가')} 다리를 절며 장작을 날랐다.`,
+ p=>p.exiled&&`${j(p.name,'은/는')} 캠프 쪽에서 오르는 연기를 멀리서 바라봤다.`,
+ p=>p.act==='rest'&&p.hp>70&&S.rule!=='none'&&`${j(p.name,'은/는')} 오늘도 그늘에 누워 있었다. 누군가 그쪽을 흘겨봤다.`,
+ p=>p.ordered&&leader()&&`${j(p.name,'이/가')} ${leader().name}의 말대로 ${ACTS[p.act]}에 나섰다.`,
+ p=>{const f=friendOf(p).b;return f&&f.alive&&!f.away&&f.zone===p.zone&&`${wa(p)} ${j(f.name,'이/가')} 나란히 ${ACTS[p.act]}을 하며 고향 이야기를 했다.`},
+ p=>{const f=friendOf(p).w;return f&&f.alive&&!f.away&&f.zone===p.zone&&`${wa(p)} ${f.name}은 같은 곳에 있었지만 한마디도 하지 않았다.`},
+ p=>`${p.name}의 얼굴이 볕에 검게 탔다.`,
+ p=>`${j(p.name,'이/가')} 조개를 주워 목걸이를 만들었다.`,
+ p=>`${j(p.name,'은/는')} 일하다 말고 바닷물에 발을 담갔다.`
+];
+function vignettes(){
+  const ps=isl(),out=[];const by=a=>ps.filter(p=>p.act===a);
+  const fs=by('fish');if(fs.length){const t=best(fs,p=>p.lastGain);if(t.lastGain>.9)out.push(`${j(t.name,'이/가')} 물고기를 ${Math.round(t.lastGain*2.5)}마리 건져 올렸다${fs.length>1?`. 함께 나간 ${fs.length-1}명은 그보다 적었다`:''}.`);else out.push(`${crowd(fs,'이/가')} 바다에 나갔지만 거의 빈손이었다.`)}
+  const bd=by('build');if(bd.length)out.push(`${crowd(bd,'이/가')} ${S.flags.cave?'동굴 입구에 바람막이를 쌓았다':'쉼터 지붕에 야자잎을 덧댔다'}.`);
+  const wt=by('water');if(wt.length){const ws=waterSource();out.push(rainy()?`${crowd(wt,'이/가')} 빗물을 받아 병마다 채웠다.`:ws==='spring'?`${crowd(wt,'이/가')} 샘까지 오가며 물을 길었다.`:ws?`${crowd(wt,'이/가')} 모래 우물에서 뿌연 물을 떠 왔다.`:`${crowd(wt,'이/가')} 물을 찾아 해변을 헤맸지만 빈손이었다.`)}
+  const sg=by('signal');if(sg.length)out.push(`${crowd(sg,'이/가')} 언덕에서 신호불에 젖은 잎을 얹어 연기를 키웠다.`);
+  const ex=by('explore');if(ex.length&&!out.some(x=>x.includes('발견')))out.push(`${crowd(ex,'이/가')} 안개 낀 쪽으로 길을 내며 들어갔다.`);
+  const pool=shuffle(ps.slice());let n=0;const usedF=new Set();
+  for(const p of pool){if(n>=2)break;for(const f of shuffle(AMB.slice())){if(usedF.has(f))continue;const t=f(p);if(t){out.push(t);usedF.add(f);n++;break}}}
+  return shuffle(out).slice(0,4);
+}
+function workPhase(){
+  const ps=isl();
+  if(S.phase===0){ps.forEach(p=>{p.contrib=0;p.dayContrib=0});S.gain={food:0,water:0,wood:0};S.menu={};S.flags.propCool=false}
+  const cnt={};for(const p of shuffle(ps.slice())){p.act=chooseAct(p,cnt);cnt[p.act]=(cnt[p.act]||0)+1;p.zone=zoneOf(p,p.act);const z=ZONES[p.zone];p.tx=z.x;p.ty=z.y}
+  const before=S.log.length;
+  for(const p of ps)doAct(p);
+  const zm={};for(const p of act())(zm[p.zone]=zm[p.zone]||[]).push(p);
+  for(const z in zm){const g=zm[z];if(g.length<2)continue;for(const a of g)for(const b of g)if(a!==b)rel(a,b,1.1)}
+  social();skim();politics();
+  const v=vignettes();v.forEach(life);
+  S.now=v.slice(0,3);
+  const big=S.log.slice(before).filter(e=>e.k!=='life');if(big.length)S.now=[big[big.length-1].t].concat(S.now.slice(0,2));
+  if(S.phase===1){
+    const g=S.gain,bits=[];if(g.food>.1)bits.push(`식량 +${f1(g.food)}`);if(g.water>.1)bits.push(`물 +${f1(g.water)}`);if(g.wood>.1)bits.push(`장작 +${f1(g.wood)}`);
+    log(`오늘 모은 것: ${bits.join(', ')||'거의 없음'}${S.rule==='none'?' (각자 챙김)':''}`);
+  }
+  S.phase++;
+}
+
+/* ---------- 저녁 ---------- */
+function distribute(){
+  const ps=isl();if(!ps.length)return;
+  const needF=S.rationMul,needW=S.waterHalfDay===S.day?.5:1;
+  ps.forEach(p=>{p.ateF=0;p.ateW=0});
+  const eatStash=(p,k,need)=>{const have=k==='food'?p.ateF:p.ateW;const g=Math.min(Math.max(0,need-have),p.stash[k]);p.stash[k]-=g;if(k==='food')p.ateF+=g;else p.ateW+=g};
+  const take=(p,k,a)=>{const g=Math.min(a,S[k]);S[k]-=g;if(k==='food')p.ateF+=g;else p.ateW+=g};
+  const comm=ps.filter(p=>!p.exiled);
+  if(S.rule==='none'){
+    const order=comm.slice().sort((a,b)=>(b.t.greed*.6+b.t.stamina*.4+r()*.3)-(a.t.greed*.6+a.t.stamina*.4+r()*.3));
+    for(const p of order){const m=1+p.t.greed*.5;const gf=Math.min(S.food,needF*m*.7);S.food-=gf;p.stash.food+=gf;const gw=Math.min(S.water,needW*m*.7);S.water-=gw;p.stash.water+=gw}
+    for(const p of ps){eatStash(p,'food',needF);eatStash(p,'water',needW)}
+    for(const h of ps.filter(p=>p.ateF<needF*.5||p.ateW<needW*.5)){
+      for(const d of shuffle(comm.filter(p=>p!==h))){
+        const k=h.ateW<needW*.5?'water':'food';
+        if(d.stash[k]>.6&&(d.t.empathy*.7+d.rel[h.id]/100)>.55){const g=Math.min(.6,d.stash[k]);d.stash[k]-=g;if(k==='food')h.ateF+=g;else h.ateW+=g;rel(h,d,8);d.st.shared++;if(chance(.35))log(`${j(d.name,'이/가')} ${h.name}에게 ${k==='food'?'먹을 것':'물'}을 몰래 건넸다.`,'good');break}
+      }
+    }
+  }else{
+    const shares=new Map();let ord=comm.slice();
+    if(S.tonight==='weak')ord.sort((a,b)=>a.hp-b.hp);else if(S.tonight==='work')ord.sort((a,b)=>b.dayContrib-a.dayContrib);
+    if(S.tonight){let fl=S.food,wl=S.water;for(const p of ord){const f=Math.min(needF,fl);fl-=f;const w2=Math.min(needW,wl);wl-=w2;shares.set(p,[f,w2])}}
+    else if(S.rule==='equal'){const pf=Math.min(needF,S.food/comm.length),pw=Math.min(needW,S.water/comm.length);comm.forEach(p=>shares.set(p,[pf,pw]))}
+    else if(S.rule==='work'){
+      const w=comm.map(p=>p.dayContrib+.25),tw=w.reduce((a,b)=>a+b,0)||1,tf=Math.min(S.food,comm.length*needF*1.1),tW=Math.min(S.water,comm.length*needW*1.1);
+      comm.forEach((p,i)=>shares.set(p,[Math.min(needF*1.3,tf*w[i]/tw),Math.min(needW*1.3,tW*w[i]/tw)]));
+    }else{
+      const L=leader();ord.sort((a,b)=>(b===L?999:L?b.rel[L.id]+L.rel[b.id]:0)-(a===L?999:L?a.rel[L.id]+L.rel[a.id]:0));
+      let fl=S.food,wl=S.water;for(const p of ord){const f=Math.min(p===L?needF*1.3:needF,fl);fl-=f;const w2=Math.min(p===L?needW*1.2:needW,wl);wl-=w2;shares.set(p,[f,w2])}
+    }
+    for(const [p,[f,w]] of shares){if(p.noFood){p.noFood=false;continue}take(p,'food',f);take(p,'water',w)}
+    for(const p of ps){eatStash(p,'food',needF);eatStash(p,'water',needW)}
+    const L=leader();if(L)for(const p of comm)if(p!==L)rel(p,L,p.ateF>=needF*.8?1.5:-4);
+  }
+  S.tonight=null;
+  if(S.rationDays>0){S.rationDays--;if(!S.rationDays){S.rationMul=1;log('절반 배급이 끝났다.')}}
+}
+function evening(){
+  S.phase=2;
+  const ps=isl();
+  for(const p of ps){p.act=p.exiled?'eat':'eat';p.zone=p.exiled?(S.discovered.north?'north':'palm'):campZone();const z=ZONES[p.zone];p.tx=z.x;p.ty=z.y}
+  if(S.fire){if(S.wood>=1)S.wood-=1;else{S.fire=false;log('장작이 떨어져 캠프의 불이 꺼졌다. 날것을 먹어야 한다.','bad')}}
+  distribute();
+  const dishes=[];if(S.menu.fish)dishes.push(S.fire?'구운 생선':'날생선');if(S.menu.palm)dishes.push('코코넛');if(S.menu.fruit)dishes.push(S.flags.fruitOk?'붉은 열매':'시큼한 열매');if(S.menu.crab)dishes.push('게');
+  const full=ps.filter(p=>p.ateF>=.8&&p.ateW>=.8).length,hungry=ps.filter(p=>p.ateF<.35).length,dry=ps.filter(p=>p.ateW<.35).length;
+  const who=S.rule==='leader'&&leader()?`${j(leader().name,'이/가')} 몫을 나눴다. `:S.rule==='equal'?(findP(p=>p.accountant)?`${j(findP(p=>p.accountant).name,'이/가')} 똑같이 나눴다. `:'모두 똑같이 나눴다. '):S.rule==='work'?'일한 순서대로 받아 갔다. ':'각자 챙긴 걸 먹었다. ';
+  const meal=`저녁은 ${dishes.length?dishes.join(', '):'남은 과자 부스러기'}. ${who}${full}명이 배불리 먹었고${hungry?`, ${hungry}명은 거의 굶었다`:''}${dry?`. ${dry}명은 물을 거의 마시지 못했다`:''}.`;
+  life(meal);
+  const extra=[];
+  const c=act();if(c.length>=2){
+    let pr=null,bs=-1e9;for(let i=0;i<8;i++){const a=pick(c),b=pick(c);if(a!==b&&a.rel[b.id]+b.rel[a.id]>bs){bs=a.rel[b.id]+b.rel[a.id];pr=[a,b]}}
+    const x=r();
+    if(x<.3&&pr)extra.push(`${wa(pr[0])} ${j(pr[1].name,'이/가')} 불 옆에서 늦게까지 이야기를 나눴다.`);
+    else if(x<.45)extra.push('누군가 집에 두고 온 강아지 이야기를 꺼내자 다들 조용해졌다.');
+    else if(x<.6){const s=best(c,p=>p.t.charisma+r()*.4);extra.push(`${j(s.name,'이/가')} 뭍에 나가면 제일 먼저 먹을 음식을 말하자 다들 따라 말했다. 짜장면이 가장 많았다.`)}
+    else if(x<.7&&!S.fire)extra.push('불이 없어 다들 서로 등을 맞대고 앉았다.');
+    else if(x<.82){const p=pick(c);extra.push(`${j(p.name,'은/는')} 밥 대신 별자리를 세다 잠들었다.`)}
+    else if(leader()){extra.push(`${j(leader().name,'이/가')} 내일 할 일을 정했다. ${c.filter(p=>p.rel[leader().id]<0).length}명은 듣지 않았다.`)}
+  }
+  extra.forEach(life);
+  S.now=[meal].concat(extra);
+  S.phase=3;
+}
+function kill(p,cause){
+  if(!p.alive)return;p.alive=false;p.death={d:S.day,cause};S.lastDeath=S.day;
+  log(`${j(p.name,'이/가')} 세상을 떠났다. (${cause})`,'death');
+  for(const o of isl()){const k=o.rel[p.id];o.mor=clamp(o.mor-(k>20?18:6),0,100)}
+  if(S.leader===p.id){S.leader=null;log('섬에는 다시 지도자가 없다.','pol')}
+}
+function night(){
+  S.phase=3;
+  const ps=isl(),w=S.weather;
+  for(const p of ps){p.act='sleep';p.zone=p.exiled?(S.discovered.north?'north':'palm'):campZone();const z=ZONES[p.zone];p.tx=z.x;p.ty=z.y}
+  const shelterOk=S.flags.cave||S.shelter>=40;const before=S.log.length;
+  for(const p of ps){
+    p.sat=clamp(p.sat-27.5+p.ateF*34,0,100);p.hyd=clamp(p.hyd-(w==='폭염'?(S.siestaDay===S.day?30:44):32)+p.ateW*40,0,100);
+    const c={굶주림:0,갈증:0,병:0,부상:0,추위:0};
+    if(p.sat<25)c['굶주림']=(25-p.sat)*.45;if(p.hyd<25)c['갈증']=(25-p.hyd)*.78;
+    if(p.sick>0){c['병']=9;p.sick--;if(p.sick===0)log(`${j(p.name,'이/가')} 병을 털고 일어났다.`,'good')}
+    if(p.inj>0){c['부상']=3.5;p.inj--}
+    if(rainy()&&!shelterOk&&!p.exiled){c['추위']=w==='폭풍'?11:5;if(chance(w==='폭풍'?.12:.05)&&!p.sick)p.sick=ri(2,5)}
+    if(p.exiled&&rainy())c['추위']+=w==='폭풍'?12:6;
+    if(!S.fire&&rainy())c['추위']+=3;
+    let neg=0;for(const k in c)neg+=c[k];neg*=(1.25-p.t.stamina*.45);
+    let pos=0;if(p.sat>40&&p.hyd>40&&!p.sick)pos+=5;if(p.mor>70)pos+=1;
+    p.hp=clamp(p.hp-neg+pos,0,100);
+    p.mor=clamp(p.mor+(p.ateF>=.8&&p.ateW>=.8?2:-5)+(S.fire?0:-3)+(p.exiled?-6:0),0,100);
+    if(p.hp<=0){let k='굶주림',m=-1;for(const kk in c)if(c[kk]>m){m=c[kk];k=kk}
+      kill(p,{굶주림:'굶주림',갈증:'탈수',병:'병',부상:'부상 악화',추위:'비바람 속 저체온'}[k])}
+  }
+  const sc=sickCount();
+  if(sc>0&&S.quarantineDays<=0){for(const p of isl())if(!p.sick&&chance(Math.min(.2,.035*sc)*(S.boilDays>0?.5:1)*(S.flags.closeCare===S.day?2:1))){p.sick=ri(2,5);log(`${j(p.name,'이/가')} 열이 오르기 시작했다.`,'bad')}}
+  if(!S.fire)for(const p of isl())if(!p.sick&&chance(.03))p.sick=ri(2,4);
+  if(S.badFoodDay===S.day)for(const p of isl())if(!p.sick&&chance(.2)){p.sick=ri(2,4);log(`${j(p.name,'이/가')} 상한 생선을 먹고 밤새 앓았다.`,'bad')}
+  if(!waterSource()&&S.boilDays<=0)for(const p of isl())if(!p.sick&&chance(.008))p.sick=ri(2,4);
+  ['quarantineDays','watchDays','boilDays'].forEach(k=>{if(S[k]>0)S[k]--});
+  if(S.pit>0){S.pit--;if(chance(.28)){S.food+=10;log('정글의 함정에 멧돼지 한 마리가 빠졌다. 오랜만에 고기다.','good');S.menu.boar=1}}
+  S.stocks.fish=Math.min(S.fishMax,S.stocks.fish+9);S.stocks.palm=Math.min(100,S.stocks.palm+5);S.stocks.fruit=Math.min(100,S.stocks.fruit+6);
+  S.signal=Math.max(S.signalFloor,S.signal-(w==='폭풍'?14:6));
+  if(w==='폭풍'&&!S.flags.cave){
+    if(S.flags.holdRoof===S.day)log('모두 밤새 지붕을 붙잡았다. 쉼터는 버텼다.','good');
+    else{S.shelter=clamp(S.shelter-ri(8,18),0,100);log('폭풍이 쉼터 일부를 날려 버렸다.','bad')}
+    if(S.flags.stormSafe!==S.day&&S.food>2){const l=S.food*.25;S.food-=l;log(`파도가 캠프까지 밀려와 식량 ${f1(l)}만큼을 쓸어 갔다.`,'bad')}
+    if(S.fire&&S.flags.fireGuard!==S.day&&chance(.4)){S.fire=false;log('비바람에 모닥불이 꺼졌다.','bad')}
+  }else S.shelter=clamp(S.shelter-1.5,0,100);
+  const L=leader();if(L)L.st.leaderDays++;
+  for(const p of exl()){if(S.day-p.exileDay>=3&&avgRel(p)>-4&&chance(.35)){p.exiled=false;log(`쫓겨났던 ${j(p.name,'이/가')} 조용히 캠프로 돌아왔다. 아무도 막지 않았다.`,'soc');rec(p,'추방된 뒤 다시 캠프로 돌아왔다',2)}}
+  const nl=[];
+  if(rainy()&&!shelterOk)nl.push('빗물이 쉼터 안으로 샜다. 다들 쪼그려 앉아 밤을 새웠다.');
+  else{const p=pick(isl());if(p)nl.push(pick([`${j(p.name,'은/는')} 잠들지 못하고 파도 소리를 셌다.`,`${j(p.name,'이/가')} 잠결에 누군가의 이름을 불렀다.`,`모기 때문에 ${j(p.name,'이/가')} 밤새 뒤척였다.`,`${j(p.name,'이/가')} 불침번을 서며 꺼져 가는 불에 장작을 넣었다.`]))}
+  nl.forEach(life);
+  const big=S.log.slice(before).filter(e=>e.k!=='life');S.now=big.slice(-2).map(e=>e.t).concat(nl);
+  if(S.rescueIn>0){S.rescueIn--;if(S.rescueIn===0)return endGame('rescue',S.rescueHow||'raft')}
+  if(isl().length===0){if(S.people.some(p=>p.alive&&p.away))return endGame('rescue','raft');return endGame('dead')}
+  if(S.day>=5){
+    const pShip=.08+Math.max(0,S.day-6)*.008;
+    if(S.day>=36||chance(pShip)){
+      const plane=S.day>=36;
+      const see=plane?1:clamp(S.signal/100*.85+(S.signalNight?.35:0)+(S.discovered.north?.04:0)+S.bottles*.02,0,.95);
+      if(chance(see)){log(plane?'낮게 나는 수색기가 섬 위를 두 번 돌았다. 날개를 흔들었다.':'밤바다 저편에서 불빛이 깜빡였다. 신호를 본 배가 방향을 틀었다.','rescue');return endGame('rescue',plane?'plane':'ship')}
+      S.missed++;log(S.signal<25?'새벽에 누군가 말했다. 수평선 끝으로 배 불빛이 지나갔다고. 신호불은 꺼져 있었다.':'밤에 배 한 척이 멀리 지나갔다. 연기는 올랐지만 닿지 않았다.','bad');for(const p of isl())p.mor=clamp(p.mor-6,0,100);
+    }
+  }
+  S.signalNight=false;
+  S.weather=S.next;const x=r();S.next=x<.46?'맑음':x<.66?'흐림':x<.82?'비':x<.9?'폭풍':'폭염';
+  S.day++;S.phase=0;
+  log(`${S.day}일째 아침. 날씨: ${S.weather}`,'day');
+}
+
+/* ---------- 사건 ---------- */
+const vol=(f,n,ok)=>{let a=act().filter(ok||(p=>p.hp>35));if(!a.length&&!ok)a=act();return a.sort((x,y)=>f(y)-f(x)).slice(0,n)};
+function injure(p,L,why){if(!p)return;p.inj=ri(3,6);L.push(`${j(p.name,'이/가')} ${why}`)}
+const someone=f=>{const a=act();return a.length?(f?best(a,x=>f(x)+r()*.3):pick(a)):null};
+const allMor=d=>act().forEach(p=>p.mor=clamp(p.mor+d,0,100));
+function rescueNow(L,how,line){L.push(line);L.push('※ 구조된다.');log('배가 섬을 향해 뱃머리를 돌렸다.','rescue');endGame('rescue',how,true)}
+function pairWorst(){const ps=act();let b=null,v=1e9;for(const a of ps)for(const c of ps)if(a.id<c.id){const s=a.rel[c.id]+c.rel[a.id];if(s<v){v=s;b=[a,c]}}return b?{a:b[0],b:b[1],v}:null}
+function pairBest(){const ps=act();let b=null,v=-1e9;for(const a of ps)for(const c of ps)if(a.id<c.id){const s=a.rel[c.id]+c.rel[a.id];if(s>v){v=s;b=[a,c]}}return b?{a:b[0],b:b[1],v}:null}
+function ruleVote(L,rule){
+  const ps=act();L.push(`'${RULES[rule]}' 안을 두고 모두 모인다.`);
+  const pro=best(ps,p=>voteScore(p,rule,null)),con=best(ps,p=>-voteScore(p,rule,null));
+  L.push(`${j(pro.name,'이/가')} 찬성 쪽에서 먼저 말을 꺼낸다.`);if(con!==pro)L.push(`${j(con.name,'이/가')} 반대한다. 목소리가 높아진다.`);
+  const res=vote(rule,null);L.push(`찬성 ${res.yes} · 반대 ${res.no}`);
+  if(res.yes>res.no){setRule(rule);log(`투표로 섬의 규칙이 '${RULES[rule]}'(으)로 바뀌었다.`,'pol');L.push(`※ 이제 섬의 규칙은 '${RULES[rule]}'이다.`);if(con!==pro)rel(con,pro,-8)}
+  else L.push('※ 부결됐다. 규칙은 그대로다.');
+}
+function electVote(L){
+  const ps=act(),tally=new Map();L.push('한 사람씩 가장 믿는 사람의 이름을 말한다.');
+  for(const v of ps){const c=best(ps,x=>(x===v?v.t.charisma*30-10:v.rel[x.id])+x.t.charisma*18+x.st.found.length*4+r()*12);tally.set(c,(tally.get(c)||0)+1)}
+  const arr=[...tally].sort((a,b)=>b[1]-a[1]);arr.slice(0,3).forEach(([p,n])=>L.push(`${p.name} — ${n}표`));
+  if(arr[1]&&arr[1][1]===arr[0][1]){L.push('동점이다. 한참을 다툰 끝에 결론을 내리지 못한다.');return}
+  const w=arr[0][0];if(leader()===w){L.push(`${j(w.name,'이/가')} 그대로 지도자로 남는다.`);return}
+  setLeader(w,'vote');log(`${j(w.name,'이/가')} 섬의 지도자가 됐다.`,'pol');L.push(`※ ${j(w.name,'이/가')} 섬의 지도자가 된다.`);
+}
+function impeach(L,Ld){
+  const ps=act().filter(p=>p!==Ld);let out=0;L.push('물러나야 한다고 생각하는 사람은 돌을 하나씩 불 앞에 놓는다.');
+  for(const v of ps)if(v.rel[Ld.id]+(v.sat<35?-15:0)+(v.t.temper-.5)*10+r()*10<4)out++;
+  L.push(`돌 ${out}개. ${ps.length}명 중.`);
+  if(out>ps.length/2){setLeader(null);log(`불신임 투표로 ${j(Ld.name,'이/가')} 지도자 자리에서 내려왔다.`,'pol');L.push(`※ ${j(Ld.name,'은/는')} 더 이상 지도자가 아니다.`);if(S.rule==='leader'){setRule('equal');L.push('배급은 균등 배급으로 돌아간다.')}rec(Ld,'불신임 투표로 지도자 자리를 잃었다',3)}
+  else{L.push(`※ ${j(Ld.name,'이/가')} 자리를 지킨다.`);for(const v of ps)if(v.rel[Ld.id]<0)rel(v,Ld,-3)}
+}
+function exileP(a,L){a.exiled=true;a.exileDay=S.day;a.st.votedOut=true;if(S.leader===a.id)setLeader(null);L.push(`※ ${j(a.name,'은/는')} 캠프에서 쫓겨났다. 이제 혼자 먹을 것을 구해야 한다.`);rec(a,'캠프에서 추방당했다',4);log(`${j(a.name,'이/가')} 캠프에서 쫓겨났다.`,'pol')}
+function scav(L){const x=r();
+  if(x<.28){S.water+=3;L.push('찌그러진 페트병 여러 개와 물이 반쯤 든 통 하나.');L.push('※ 물 +3')}
+  else if(x<.5){S.food+=4;L.push('스티로폼 아이스박스. 안에 밀봉된 소시지가 있다.');L.push('※ 식량 +4')}
+  else if(x<.68){S.tools+=1;L.push('밧줄 한 다발과 녹슨 칼 한 자루.');L.push('※ 도구 +1')}
+  else if(x<.78){S.medicine+=1;L.push('방수 파우치 안에 해열제 한 줄.');L.push('※ 약 +1')}
+  else L.push('플라스틱 조각과 슬리퍼 한 짝뿐이다.')}
+function exploreParty(L,n,pBase){
+  const t=vol(p=>p.t.brave+p.sk.explore,n,p=>p.hp>40&&!p.inj);if(!t.length){L.push('나설 만큼 기운 있는 사람이 없다.');return}
+  L.push(`${jn(t,'이/가')} 물병을 챙겨 출발한다.`);L.push('덤불을 헤치고, 바위를 오르고, 한 번은 길을 잃는다.');
+  const h=hidden();if(h.length&&chance(pBase)){const z=!waterSource()&&h.includes('spring')&&chance(.6)?'spring':pick(h);L.push('해 질 녘에야 돌아온 얼굴이 밝다.');discover(z,t[0]);L.push(`※ ${j(ZONES[z].name,'을/를')} 찾았다.`)}else L.push('※ 아무것도 찾지 못하고 돌아왔다.');
+  t.forEach(p=>p.hp-=6);if(chance(n>1?.22:.15))injure(t[t.length-1],L,'돌아오는 길에 넘어져 다쳤다.');
+}
+const EV=[];const E=o=>EV.push(o);
+
+E({id:'first',k:'첫날',ph:[2],once:true,force:true,cond:()=>S.day===1,
+ setup:()=>({cap:findP(p=>p.captain)}),title:()=>'첫날 밤',
+ text:()=>`해가 졌다. 건져 낸 생수 ${f1(S.water)}병과 과자 ${f1(S.food)}봉지가 모래 위에 놓여 있다. 열네 명이 그것을 보고 있다. 아직 아무도 먼저 손을 뻗지 않았다.`,
+ opts:c=>[
+  {l:'모두 똑같이 나눈다',h:'규칙: 균등 배급',run(L){L.push('노은비가 생수 뚜껑으로 한 모금씩 따라 돌린다.');L.push('과자는 한 사람에 세 조각.');setRule('equal');L.push("※ 섬의 첫 규칙은 '균등 배급'이다.")}},
+  {l:'건진 사람이 가진다',h:'규칙 없음 · 힘센 사람이 유리',run(L){const g=best(act(),p=>p.t.greed+p.t.stamina);L.push(`${j(g.name,'이/가')} 생수 두 병을 품에 안는다.`);L.push('누구도 막지 않는다. 아직은.');g.stash.water+=1.5;S.water=Math.max(0,S.water-1.5);rec(g,'첫날 밤 생수 두 병을 먼저 챙겼다',2);for(const o of act())if(o!==g)rel(o,g,-6);L.push('※ 규칙 없이 각자 챙긴다.')}},
+  ...(c.cap?[{l:`${c.cap.name} 선장에게 맡긴다`,h:'지도자 탄생 · 규칙: 지도자 재량',run(L){L.push(`${j(c.cap.name,'이/가')} 천천히 일어선다. "배에선 선장이 나누는 법이지."`);setLeader(c.cap,'vote');setRule('leader');log(`${j(c.cap.name,'이/가')} 첫날 밤 섬의 지도자가 됐다.`,'pol');L.push(`※ ${j(c.cap.name,'이/가')} 섬을 이끈다.`)}}]:[])
+ ]});
+E({id:'ship',k:'구조',ph:[0,1],cond:()=>S.day>=3,w:()=>.6+S.day*.03,setup:()=>({p:someone(p=>p.t.brave)}),title:()=>'수평선의 배',
+ text:c=>`${j(c.p.name,'이/가')} 소리를 지른다. 수평선 끝에 배 한 척이 지나가고 있다. 섬까지 오려면 저쪽에서 우리를 봐야 한다. 장작은 ${f1(S.wood)}개 남았다.`,
+ opts:c=>[
+  {l:'신호불에 장작을 전부 넣는다',h:'장작 전부 · 장작이 많을수록 잘 보인다',run(L){const w=S.wood;S.wood=0;const see=clamp(.06+w*.055+S.signal/300,0,.8);L.push(`장작 ${f1(w)}개를 한꺼번에 던져 넣는다.`);L.push('젖은 잎을 덮자 검은 연기가 기둥처럼 오른다.');if(chance(see))rescueNow(L,'ship','배가 천천히 뱃머리를 돌린다. 경적이 두 번 울린다.');else{L.push('배는 멈추지 않는다. 점점 작아지더니 사라진다.');S.missed++;allMor(-10);L.push('※ 장작만 잃었다.')}}},
+  {l:'모두 해변에서 옷을 흔든다',h:'잃을 건 없다 · 확률 낮음',run(L){L.push('열 명 넘는 사람이 웃옷을 벗어 흔들며 소리친다.');if(chance(.08+S.signal/500))rescueNow(L,'ship','배에서 누군가 쌍안경을 든다. 배가 방향을 튼다.');else{L.push('목이 쉬도록 소리쳤지만 배는 그대로 간다.');S.missed++;allMor(-8)}}},
+  {l:'헤엄 잘 치는 사람이 따라간다',h:'성공하면 구조 · 목숨을 건다',run(L){const p=vol(x=>x.t.brave+x.sk.fish+x.t.stamina,1,x=>x.hp>50&&!x.inj)[0];if(!p){L.push('물에 들어갈 기운이 있는 사람이 없다.');S.missed++;return}L.push(`${j(p.name,'이/가')} 망설임 없이 바다로 뛰어든다.`);const x=r();
+   if(x<.22){rec(p,'배를 쫓아 헤엄쳐 가 구조를 불렀다',4);rescueNow(L,'ship',`한참 뒤, 배가 멈춘다. 갑판 위에 ${p.name}의 모습이 보인다.`)}
+   else if(x<.45){L.push('머리가 파도 사이로 보였다 안 보였다 한다.');L.push('그리고 더는 보이지 않는다.');rec(p,'떠나는 배를 쫓아 바다로 뛰어들었다',4);kill(p,'배를 쫓아 헤엄치다 돌아오지 못했다');S.missed++}
+   else{L.push('배는 너무 빠르다. 한 시간 뒤 탈진한 채 해변으로 기어 나온다.');p.hp-=25;rec(p,'떠나는 배를 쫓아 헤엄쳤다',2);S.missed++}}}
+ ]});
+E({id:'plane',k:'구조',ph:[1],cond:()=>S.day>=8,w:()=>.8,setup:()=>({g:findP(p=>p.glasses)}),title:()=>'엔진 소리',
+ text:()=>'멀리서 낮게 웅웅대는 소리가 들린다. 구름 사이로 작은 비행기 한 대가 섬 쪽으로 오고 있다. 몇 분이면 지나가 버린다.',
+ opts:c=>[
+  ...(S.wood>=2?[{l:'불붙은 장작을 들고 흔든다',h:'장작 −2',run(L){S.wood-=2;L.push('불붙은 장작을 양손에 들고 언덕으로 뛴다.');if(chance(.25+S.signal/250))rescueNow(L,'plane','비행기가 날개를 좌우로 흔든다. 봤다는 신호다.');else{L.push('비행기는 고도를 바꾸지 않는다.');S.missed++;allMor(-8)}}}]:[]),
+  {l:c.g?`${c.g.name}의 안경알로 햇빛을 반사한다`:'휴대폰 화면으로 햇빛을 반사한다',h:'맑은 날 유리',run(L){L.push('작은 유리 조각을 들고 하늘을 향해 각도를 맞춘다.');const ok=S.weather==='맑음'||S.weather==='폭염';if(ok&&chance(.3))rescueNow(L,'plane','한 번, 두 번. 비행기가 크게 원을 그리며 돌아온다.');else{L.push(ok?'빛이 비행기에 닿았는지 알 수 없다. 비행기는 지나간다.':'구름이 해를 가렸다. 반사할 빛이 없다.');S.missed++;allMor(-6)}}},
+  {l:'모두 해변에 누워 몸으로 글자를 만든다',h:'확률 낮음',run(L){L.push('열 명 남짓이 모래 위에 누워 HELP를 만든다. 한 글자가 모자란다.');if(chance(.08))rescueNow(L,'plane','비행기가 낮게 내려온다.');else{L.push('비행기는 그대로 수평선 너머로 사라진다.');S.missed++;allMor(-6)}}}
+ ]});
+E({id:'raft',k:'구조',ph:[2],cond:()=>S.wood>=10&&S.day>=5&&!S.flags.raftSent&&act().length>=5,w:()=>2,setup:()=>({b:someone(p=>p.sk.build)}),title:()=>'뗏목',
+ text:c=>`${j(c.b.name,'이/가')} 며칠 동안 몰래 모은 장작으로 뗏목을 엮어 두었다. 두 사람이 탈 수 있다. 장작 10개가 들어간다.`,
+ opts:()=>[
+  {l:'두 사람을 바다로 보낸다',h:'장작 −10 · 큰 도박',run(L){S.wood-=10;S.flags.raftSent=true;const c=vol(p=>p.t.brave+p.sk.fish*.6+p.t.stamina*.3,2,p=>p.hp>45&&!p.inj&&!p.sick);
+   if(c.length<2){L.push('나서는 사람이 없다. 뗏목은 해변에 묶인 채 남는다.');S.flags.raftSent=false;S.wood+=8;return}
+   L.push(`${jn(c,'이/가')} 손을 든다.`);L.push('남은 사람들이 코코넛 두 개와 물병 하나를 건넨다.');L.push('뗏목이 파도 너머로 점점 작아진다.');c.forEach(p=>p.st.raft=true);const x=r();
+   if(x<.3){S.rescueIn=ri(1,2);S.rescueHow='raft';L.push('…');L.push('※ 이틀 뒤, 두 사람은 바다 위에서 어선의 그물줄을 붙잡았다. 섬의 위치가 알려졌다.');c.forEach(p=>{p.away=true;rec(p,'뗏목을 타고 나가 어선을 만나 구조를 불렀다',4)})}
+   else if(x<.72){L.push('해 질 무렵, 뗏목이 해류에 밀려 다시 해변으로 돌아온다.');L.push('두 사람은 지쳐 있었지만 살아 있었다.');c.forEach(p=>{p.hp-=22;p.mor-=12;rec(p,'뗏목을 타고 나갔다가 해류에 밀려 돌아왔다',3)});S.flags.raftSent=false}
+   else{L.push('밤이 되어도 뗏목은 돌아오지 않는다.');L.push('※ 다음 날에도, 그다음 날에도.');c.forEach(p=>{rec(p,'뗏목을 타고 바다로 나갔다',4);kill(p,'바다로 나간 뒤 돌아오지 않았다')})}}},
+  {l:'뗏목을 풀어 장작으로 쓴다',h:'장작은 그대로',run(L){L.push('밧줄을 하나씩 푼다. 아무도 말이 없다.');allMor(-4);L.push('※ 다음에 또 기회가 올지도 모른다.')}},
+  {l:'날씨가 좋아질 때까지 묶어 둔다',h:'나중에 다시',run(L){L.push('뗏목을 야자나무에 단단히 묶는다.');L.push('누군가 매일 밤 그쪽을 바라본다.')}}
+ ]});
+E({id:'burn',k:'구조',ph:[0,1],once:true,cond:()=>S.day>=6&&(S.weather==='맑음'||S.weather==='폭염'),title:()=>'마른 바람',
+ text:()=>'며칠째 비가 없다. 언덕의 덤불이 종잇장처럼 말랐다. 저걸 한꺼번에 태우면 섬 전체가 연기를 뿜을 거라는 말이 나온다. 바람이 정글 쪽으로 불고 있다.',
+ opts:()=>[
+  {l:'언덕에 불을 놓는다',h:'신호 최대 · 정글이 탈 수 있다',run(L){L.push('덤불 가장자리에 불씨를 던진다.');L.push('불이 순식간에 언덕을 타고 오른다. 검은 연기가 하늘을 반으로 가른다.');S.signal=100;S.signalNight=true;
+   if(chance(.45)){L.push('바람이 바뀐다. 불길이 정글로 내려온다.');S.stocks.fruit=Math.max(0,S.stocks.fruit-60);S.wood=Math.max(0,S.wood-4);injure(someone(),L,'불길을 막다 화상을 입었다.');L.push('※ 정글 열매 절반이 타 버렸다.')}else L.push('불은 언덕 위에서 저절로 잦아든다.');L.push('※ 오늘 밤 섬은 바다 어디서나 보인다.')}},
+  {l:'그대로 둔다',h:'안전',run(L){L.push('누군가 아쉬운 듯 언덕을 올려다본다.')}}
+ ]});
+E({id:'bottle',k:'바다',ph:[0,1],once:true,cond:()=>hidden().some(z=>z==='spring'||z==='cave'),setup:()=>({p:someone()}),title:()=>'유리병',
+ text:c=>`${j(c.p.name,'이/가')} 파도에 밀려온 녹색 유리병을 주웠다. 안에 누렇게 바랜 종이가 말려 있다.`,
+ opts:()=>[
+  {l:'깨서 열어 본다',h:'무언가 적혀 있다',run(L){L.push('종이는 오래된 연필 지도다. 이 섬과 모양이 똑같다.');L.push('바위 언덕 왼쪽에 동그라미가 하나.');const z=hidden().includes('spring')?'spring':'cave';discover(z,null);L.push(`※ 지도 덕분에 ${j(ZONES[z].name,'을/를')} 찾았다. 누가 그렸는지는 끝내 모른다.`)}},
+  {l:'우리 편지를 넣어 다시 띄운다',h:'구조 확률 아주 조금',run(L){S.bottles+=2;L.push('각자 가족에게 한 줄씩 적는다.');const p=someone();L.push(`${j(p.name,'은/는')} 오래 펜을 들고 있다가 이름만 적는다.`);allMor(8)}}
+ ]});
+E({id:'sos',k:'구조',ph:[0,1],once:true,cond:()=>S.day>=2,setup:()=>({p:someone(p=>p.t.charisma)}),title:()=>'하늘에서 보이게',
+ text:c=>`${j(c.p.name,'이/가')} 말한다. 구조대는 비행기로 찾을 테니 하늘에서 우리가 보여야 한다고.`,
+ opts:()=>[
+  {l:'해변에 돌로 SOS를 쓴다',h:'신호가 10 아래로 안 떨어짐',run(L){S.signalFloor+=10;S.signal=Math.max(S.signal,S.signalFloor);S.flags.sos=true;L.push('모두 검은 돌을 나른다. 글자 하나가 사람 키의 세 배다.');act().forEach(p=>p.hp-=3);L.push('※ 신호 기본값 +10')}},
+  ...(S.wood>=1?[{l:'구명조끼로 커다란 연을 만든다',h:'신호 +12 · 기본값 +5',run(L){S.wood-=1;S.signalFloor+=5;S.signal=clamp(S.signal+12,0,100);const m=someone(p=>p.sk.build);L.push(`${j(m.name,'이/가')} 주황색 천을 찢어 연을 만든다.`);L.push('연이 언덕보다 높이 오른다.');rec(m,'구명조끼로 신호 연을 만들었다',2)}}]:[]),
+  {l:'먹고사는 게 먼저다',h:'아무것도 안 함',run(L){L.push(`${j(someone().name,'이/가')} 고개를 젓는다. 오늘 물이 먼저라고.`)}}
+ ]});
+E({id:'explore',k:'탐험',ph:[0,1],cond:()=>hidden().length>0&&act().length>=4,w:()=>!waterSource()?2.4:1,title:()=>!waterSource()?'물이 바닥난다':'안개 너머',
+ text:()=>!waterSource()?`물이 ${f1(S.water)}병 남았다. 코코넛만으로는 못 버틴다. 섬 안쪽 어딘가에 샘이 있을지 모른다.`:'아직 가 보지 못한 곳이 있다. 안개 낀 쪽에서 새 소리가 난다.',
+ opts:()=>[
+  {l:'탐험대 셋을 보낸다',h:'발견 확률 높음 · 부상 위험',run(L){exploreParty(L,3,.85)}},
+  {l:'한 명만 정찰을 보낸다',h:'발견 확률 반',run(L){exploreParty(L,1,.45)}},
+  {l:'지금은 위험하다',h:'아무것도 안 함',run(L){L.push('다들 캠프 근처에서 하던 일을 계속한다.')}}
+ ]});
+E({id:'wreck',k:'탐험',ph:[0,1],cond:()=>S.discovered.wreck&&!S.flags.wreckDone,w:()=>2,title:()=>'녹슨 화물선',
+ text:()=>'썰물이다. 동쪽 암초의 화물선 잔해까지 허리 높이로 걸어갈 수 있다. 선실 문은 반쯤 물에 잠겨 있다.',
+ opts:()=>[
+  {l:'둘이 선실 깊숙이 들어간다',h:'도구·약·식량 · 부상 위험 30%',run(L){S.flags.wreckDone=true;const t=vol(p=>p.t.brave+p.t.stamina,2,p=>p.hp>40);L.push(`${jn(t,'이/가')} 물에 잠긴 선실로 들어간다.`);L.push('녹슨 문이 비명 같은 소리를 내며 열린다.');S.tools+=3;S.medicine+=2;S.food+=6;S.water+=4;L.push('공구함, 통조림 상자, 밀봉된 구급약.');L.push('※ 도구 +3 · 약 +2 · 식량 +6 · 물 +4');t.forEach(p=>rec(p,'난파선에서 공구와 약을 건져 왔다',3));if(chance(.3))injure(t[0],L,'날카로운 철판에 팔을 깊게 베였다.')}},
+  {l:'밧줄을 묶고 한 명만 들어간다',h:'절반만 · 안전',run(L){const p=vol(x=>x.t.brave,1)[0];L.push(`${j(p.name,'이/가')} 허리에 밧줄을 묶는다.`);S.tools+=1;S.food+=3;L.push('문 가까이 있던 공구 하나와 통조림 몇 개만 건진다.');L.push('※ 도구 +1 · 식량 +3. 안쪽은 아직 남아 있다.')}},
+  {l:'건드리지 않는다',h:'',run(L){L.push('화물선은 그대로 암초 위에서 삐걱댄다.')}}
+ ]});
+E({id:'islet',k:'바다',ph:[0,1],cond:()=>S.day>=3&&S.weather!=='폭풍',title:()=>'갈매기 바위',
+ text:()=>'앞바다의 작은 바위섬 위로 갈매기 떼가 맴돈다. 둥지가 있다는 뜻이다. 헤엄쳐서 20분 거리다.',
+ opts:()=>[
+  {l:'가장 헤엄 잘 치는 사람을 보낸다',h:'알 반반 · 부상 위험',run(L){const p=vol(x=>x.t.brave+x.sk.fish,1,x=>x.hp>50&&!x.inj)[0];if(!p){L.push('바다를 건널 기운이 있는 사람이 없다.');return}L.push(`${j(p.name,'이/가')} 웃옷을 벗고 바다로 들어간다.`);const x=r();
+   if(x<.5){L.push('돌아올 땐 셔츠에 새알을 가득 싸 왔다.');S.food+=7;S.menu.egg=1;rec(p,'바위섬까지 헤엄쳐 새알을 구해 왔다',2);L.push('※ 식량 +7')}else if(x<.82){L.push('물살이 세다. 절반도 못 가서 돌아온다.');p.hp-=12}else{L.push('돌아오는 길에 물살에 휩쓸려 바위에 부딪혔다.');p.inj=ri(4,7);p.hp-=15;rec(p,'바위섬까지 헤엄치다 크게 다쳤다',2)}}},
+  {l:'포기한다',h:'',run(L){L.push('갈매기 소리만 하루 종일 들린다.')}}
+ ]});
+E({id:'scavenge',k:'바다',ph:[0],cond:()=>true,title:()=>'만조선',
+ text:()=>'밤새 바다가 거칠더니 만조선을 따라 뭔가 잔뜩 밀려왔다. 플라스틱, 나무판자, 정체 모를 상자.',
+ opts:()=>[
+  {l:'모두 나가 줍는다',h:'두 번 뒤진다 · 오전 일 줄어듦',run(L){L.push('모두 흩어져 해변을 따라 걷는다.');scav(L);scav(L);S.wood+=1.5;act().forEach(p=>p.hp-=2)}},
+  {l:'한 명만 둘러본다',h:'한 번',run(L){const p=someone();L.push(`${j(p.name,'이/가')} 혼자 해변 끝까지 걸어간다.`);scav(L)}}
+ ]});
+E({id:'journal',k:'탐험',ph:[0,1,2],once:true,cond:()=>S.discovered.cave,setup:()=>({p:someone(p=>p.t.brave)}),title:()=>'동굴 안쪽',
+ text:c=>`${j(c.p.name,'이/가')} 동굴 깊숙한 벽에서 칼로 새긴 선 수백 개를 찾았다. 바닥엔 녹슨 깡통과 방수천에 싼 공책 한 권.`,
+ opts:()=>[
+  {l:'공책을 읽는다',h:'먼저 온 사람의 기록',run(L){L.push('연필 글씨. 날짜와 날씨, 잡은 물고기 수.');L.push('중간쯤에 돌담으로 물고기를 가두는 법이 그림으로 그려져 있다.');S.flags.trap=true;L.push('마지막 장은 비어 있다.');allMor(-5);L.push('※ 물고기 덫을 쌓았다. 낚시가 늘어난다.')}},
+  {l:'덮어 두고 나온다',h:'',run(L){L.push('아무도 그 공책 이야기를 다시 꺼내지 않는다.')}}
+ ]});
+E({id:'boar',k:'정글',ph:[0,1],cond:()=>S.day>=3&&!S.pit,setup:()=>({p:someone(p=>p.sk.explore)}),title:()=>'진흙 위 발자국',
+ text:c=>`${j(c.p.name,'이/가')} 정글 진흙에서 굵은 발자국을 찾았다. 멧돼지다. 고기를 먹을 수 있다. 하지만 멧돼지는 위험하다.`,
+ opts:()=>[
+  {l:'셋이 사냥에 나선다',h:'식량 +12 반반 · 부상 위험',run(L){const t=vol(p=>p.t.brave+p.t.stamina,3);L.push(`${jn(t,'이/가')} 작살과 몽둥이를 들고 정글로 들어간다.`);if(chance(.5)){S.food+=12;S.menu.boar=1;L.push('한참의 소란 끝에 멧돼지가 쓰러진다.');t.forEach(p=>rec(p,'멧돼지 사냥에 성공했다',2));L.push('※ 식량 +12')}else L.push('멧돼지는 덤불 속으로 사라진다.');if(chance(.3))injure(pick(t),L,'멧돼지 엄니에 허벅지를 받혔다.')}},
+  {l:'구덩이 함정을 판다',h:'며칠 동안 밤마다 기회',run(L){S.pit=5;const m=someone(p=>p.sk.build);L.push(`${j(m.name,'이/가')} 짐승 길목에 구덩이를 파고 나뭇가지로 덮는다.`);L.push('※ 닷새 동안 밤마다 함정에 걸릴 수 있다.')}},
+  {l:'정글 깊이 들어가지 않는다',h:'안전',run(L){L.push('발자국 근처엔 아무도 가지 않는다.')}}
+ ]});
+E({id:'snake',k:'캠프',ph:[2],cond:()=>!S.flags.cave||chance(.5),setup:()=>({p:someone()}),title:()=>'잠자리의 뱀',
+ text:c=>`${j(c.p.name,'이/가')} 잠자리를 펴다 얼어붙었다. 팔뚝만 한 뱀 한 마리가 똬리를 틀고 있다.`,
+ opts:c=>[
+  {l:'잡는다',h:'고기 · 물릴 수 있다',run(L){const h=vol(p=>p.t.brave,1)[0];L.push(`${j(h.name,'이/가')} 막대기로 머리를 누른다.`);if(chance(.3)){h.sick=ri(3,5);h.hp-=10;L.push('뱀이 몸을 틀며 손등을 문다.');rec(h,'뱀을 잡다 물렸다',2);L.push('※ 독은 약했지만 열이 오른다.')}else{S.food+=1.5;L.push('그날 저녁 누군가 뱀을 구워 먹는다. 닭고기 맛이라고 우긴다.');rec(h,'잠자리의 뱀을 맨손으로 잡았다',1)}}},
+  {l:'막대기로 쫓아낸다',h:'',run(L){L.push('뱀은 천천히 덤불로 사라진다.');L.push(`${j(c.p.name,'은/는')} 그날 밤 한숨도 못 잔다.`);c.p.mor-=6}},
+  ...(S.wood>=2?[{l:'쉼터 둘레에 불을 피운다',h:'장작 −2 · 사기 ↑',run(L){S.wood-=2;L.push('쉼터 네 귀퉁이에 작은 불을 놓는다.');allMor(4)}}]:[])
+ ]});
+E({id:'urchin',k:'바다',ph:[0,1],cond:()=>true,setup:()=>({p:someone(p=>p.act==='fish'?1:0)}),title:()=>'성게 가시',
+ text:c=>`${j(c.p.name,'이/가')} 바위 근처에서 성게를 밟았다. 발바닥에 검은 가시가 잔뜩 박혔다.`,
+ opts:c=>{const n=findP(p=>p.nurse&&p!==c.p);return[
+  ...(n?[{l:`${n.name}에게 맡긴다`,h:'금방 낫는다',run(L){L.push(`${j(n.name,'이/가')} 생선뼈로 가시를 하나씩 빼낸다.`);c.p.inj=1;rel(c.p,n,8);rec(n,`${c.p.name} 발에 박힌 성게 가시를 빼 줬다`,1)}}]:[]),
+  ...(S.fire&&S.wood>=1?[{l:'뜨거운 물에 발을 담근다',h:'장작 −1',run(L){S.wood-=1;L.push('코코넛 껍데기에 물을 데워 발을 담근다.');c.p.inj=2}}]:[]),
+  {l:'그냥 걸으며 버틴다',h:'며칠 절뚝거림',run(L){c.p.inj=5;L.push(`${j(c.p.name,'은/는')} 이를 악물고 일어선다.`)}}
+ ]}});
+E({id:'storm_coming',k:'날씨',ph:[1],cond:()=>S.next==='폭풍',w:()=>3,setup:()=>({cap:findP(p=>p.captain)}),title:()=>'폭풍 전야',
+ text:c=>c.cap?`${j(c.cap.name,'이/가')} 하늘을 보더니 말한다. "오늘 밤 큰 놈이 온다." 쉼터 ${Math.round(S.shelter)}%, 장작 ${f1(S.wood)}.`:'바람이 이상하게 잦아들었다. 바다가 기름처럼 매끄럽다. 새들이 섬 안쪽으로 날아간다.',
+ opts:()=>[
+  {l:'쉼터를 보강한다',h:S.wood>=3?'장작 −3 · 쉼터 +20':'장작이 모자라 조금만',run(L){if(S.wood>=3){S.wood-=3;S.shelter=clamp(S.shelter+20,0,100)}else S.shelter=clamp(S.shelter+8,0,100);const m=someone(p=>p.sk.build);L.push(`${j(m.name,'이/가')} 기둥을 더 깊이 박는다.`);L.push(`※ 쉼터 ${Math.round(S.shelter)}%`);rec(m,'폭풍 전에 쉼터를 보강했다',1)}},
+  ...(S.discovered.cave&&!S.flags.cave?[{l:'동굴로 옮긴다',h:'폭풍에 끄떡없다 · 바다와 멀어짐',run(L){S.flags.cave=true;S.shelter=Math.max(S.shelter,75);L.push('짐을 나눠 지고 동굴로 줄지어 걷는다.');L.push('동굴 벽에 불빛이 일렁인다. 바람 소리가 멀다.');allMor(10);L.push('※ 이제 동굴이 집이다.')}}]:[]),
+  {l:'식량과 장작부터 높은 곳에 옮긴다',h:'식량 보호',run(L){S.flags.stormSafe=S.day;L.push('식량 자루와 장작을 바위 틈 높은 곳에 쑤셔 넣는다.');L.push('※ 파도가 식량을 쓸어 가지 않는다.')}}
+ ]});
+E({id:'storm_night',k:'날씨',ph:[2],cond:()=>S.weather==='폭풍',w:()=>3,title:()=>'폭풍 한가운데',
+ text:()=>S.flags.cave?'동굴 입구로 빗줄기가 들이친다. 바닥에 물이 고이기 시작한다. 불이 위태롭다.':'바람이 쉼터 지붕을 들어 올린다. 야자잎이 한 장씩 날아간다. 모닥불이 옆으로 눕는다.',
+ opts:()=>[
+  ...(!S.flags.cave?[{l:'모두 지붕을 붙잡는다',h:'쉼터를 지킨다 · 모두 지친다',run(L){S.flags.holdRoof=S.day;act().forEach(p=>p.hp-=6);L.push('열 명 넘는 사람이 밧줄과 기둥에 매달린다.');L.push('누군가 웃음을 터뜨린다. 다들 따라 웃는다.');allMor(6)}}]:[]),
+  {l:'불씨부터 지킨다',h:'불은 안 꺼진다',run(L){S.flags.fireGuard=S.day;const p=someone(p=>p.t.coop);L.push(`${j(p.name,'이/가')} 몸으로 불을 감싸고 밤을 새운다.`);rec(p,'폭풍 속에서 몸으로 불씨를 지켰다',2);p.hp-=6}},
+  {l:'정글 큰 나무 밑으로 피한다',h:'바람은 피하지만 젖는다',run(L){L.push('모두 정글로 뛰어간다. 나무 밑은 조금 낫다.');for(const p of act())if(chance(.15)&&!p.sick)p.sick=ri(2,4);S.flags.holdRoof=S.day}}
+ ]});
+E({id:'fire_out',k:'캠프',ph:[0,1,2],cond:()=>!S.fire,w:()=>3,setup:()=>({g:findP(p=>p.glasses)}),title:()=>'꺼진 불',
+ text:()=>'불이 꺼졌다. 날생선을 씹다 뱉는 사람이 늘었다. 밤이 되면 춥다.',
+ opts:c=>[
+  ...(S.wood>=1?[{l:'둘이 번갈아 나무를 비빈다',h:'성공 60% · 장작 −1',run(L){const t=vol(p=>p.sk.build+p.t.stamina,2);L.push(`${jn(t,'이/가')} 손바닥이 벗겨지도록 막대를 비빈다.`);S.wood-=1;if(chance(.6)){S.fire=true;L.push('가느다란 연기, 그리고 작은 불씨.');L.push('※ 불이 다시 붙었다.');t.forEach(p=>rec(p,'꺼진 불을 다시 살렸다',2))}else L.push('두 시간이 지나도 연기만 난다.')}}]:[]),
+  ...(c.g&&(S.weather==='맑음'||S.weather==='폭염')?[{l:`${c.g.name}의 안경으로 햇빛을 모은다`,h:'맑은 날 · 확실',run(L){S.fire=true;L.push(`${j(c.g.name,'이/가')} 안경을 벗어 마른 잎 위에 빛을 모은다.`);L.push('삼십 초 만에 연기가 난다. 다들 박수를 친다.');rec(c.g,'안경으로 불을 붙였다',3);for(const o of act())rel(o,c.g,6);L.push('※ 불이 다시 붙었다.')}}]:[]),
+  {l:'불 없이 버틴다',h:'병·추위 위험',run(L){L.push('오늘도 날것을 먹는다.');allMor(-4)}}
+ ]});
+E({id:'boil',k:'캠프',ph:[2],cond:()=>S.fire&&S.wood>=2&&S.boilDays<=0&&(sickCount()>=1||!waterSource()),setup:()=>({n:findP(p=>p.nurse)||someone()}),title:()=>'배탈',
+ text:c=>`배탈 난 사람이 늘었다. ${j(c.n.name,'이/가')} 물은 무조건 끓여 마시자고 한다. 장작이 더 든다.`,
+ opts:()=>[
+  {l:'모든 물을 끓인다',h:'장작 −2 · 나흘간 병 덜 퍼짐',run(L){S.wood-=2;S.boilDays=4;L.push('모닥불 둘레에 코코넛 껍데기가 줄지어 김을 낸다.');L.push('※ 나흘 동안 병이 덜 퍼진다.')}},
+  {l:'장작이 아깝다',h:'',run(L){L.push('물은 그냥 마신다.')}}
+ ]});
+E({id:'fruit',k:'정글',ph:[0,1],once:true,cond:()=>!S.flags.fruitOk,setup:()=>({p:someone(p=>p.sk.explore),b:findP(p=>p.botanist)}),title:()=>'붉은 열매',
+ text:c=>`${j(c.p.name,'이/가')} 정글 깊은 곳에서 붉은 열매가 주렁주렁 달린 나무를 찾았다. 먹을 수 있다면 식량 걱정이 크게 준다.`,
+ opts:c=>[
+  ...(c.b?[{l:`${c.b.name}에게 먼저 보여 준다`,h:'식물학자',run(L){L.push(`${j(c.b.name,'이/가')} 열매를 쪼개 냄새를 맡고 즙을 혀끝에 댄다.`);L.push('"이건 괜찮아요. 잎이 뾰족한 저건 절대 먹지 마세요."');S.flags.fruitOk=true;rec(c.b,'먹을 수 있는 열매를 가려냈다',3);for(const o of act())rel(o,c.b,6);L.push('※ 열매 채집이 안전하고 풍성해졌다.')}}]:[]),
+  {l:'두 사람이 먼저 먹어 본다',h:'반반 · 식중독 위험',run(L){const t=vol(p=>p.t.brave+p.t.greed*.3,2);L.push(`${jn(t,'이/가')} 한 입씩 먹는다. 밤새 모두 그들의 얼굴을 지켜본다.`);if(chance(.5)){S.flags.fruitOk=true;L.push('아침까지 아무 일도 없다.');L.push('※ 열매를 먹을 수 있다.')}else{t.forEach(p=>{p.sick=ri(3,5);p.hp-=10;rec(p,'독 있는 열매를 먼저 먹고 앓았다',2)});L.push('새벽, 둘 다 배를 움켜쥔다.');L.push('※ 열매는 먹으면 안 된다.')}}},
+  {l:'손대지 않는다',h:'',run(L){L.push('붉은 열매는 새들 차지가 된다.')}}
+ ]});
+E({id:'coconut',k:'정글',ph:[0,1],cond:()=>S.stocks.palm<50,w:()=>2,title:()=>'꼭대기의 코코넛',
+ text:()=>'낮은 가지의 코코넛은 다 땄다. 가장 높은 나무 꼭대기에만 열매가 남았다. 아파트 4층 높이다.',
+ opts:()=>[
+  {l:'밧줄을 감고 오른다',h:'물 +3 · 추락 20%',run(L){const p=vol(x=>x.t.brave+x.sk.gather,1)[0];if(!p){L.push('오를 기운이 있는 사람이 없다.');return}L.push(`${j(p.name,'이/가')} 허리에 밧줄을 감고 나무를 오른다.`);S.stocks.palm=Math.min(100,S.stocks.palm+35);S.water+=3;S.food+=2;if(chance(.2)){p.inj=ri(4,7);p.hp-=12;L.push('열매를 다 던져 내리고 내려오다 손을 놓쳤다.');rec(p,'높은 야자나무에서 떨어졌다',2)}else L.push('코코넛이 쿵쿵 모래 위로 떨어진다.');L.push('※ 물 +3 · 식량 +2')}},
+  {l:'저절로 떨어질 때까지 기다린다',h:'',run(L){L.push('다들 고개를 들고 한숨만 쉰다.')}}
+ ]});
+E({id:'shark',k:'바다',ph:[0,1],cond:()=>S.day>=3&&S.weather!=='폭풍',setup:()=>({p:someone(p=>p.sk.fish)}),title:()=>'지느러미',
+ text:c=>`${j(c.p.name,'이/가')} 얕은 바다에서 허겁지겁 뛰쳐나온다. 큰 지느러미를 봤다고 한다. 그 뒤로 물고기 떼가 반짝인다.`,
+ opts:()=>[
+  {l:'그래도 작살을 들고 들어간다',h:'식량 +8 · 부상 25%',run(L){const t=vol(p=>p.sk.fish+p.t.brave,3);L.push(`${jn(t,'이/가')} 허리까지 물에 들어간다.`);S.food+=8;S.menu.fish=1;L.push('물고기 떼 한가운데서 작살이 연달아 꽂힌다.');if(chance(.25)){const p=pick(t);p.inj=ri(4,7);p.hp-=15;L.push(`무언가 ${p.name}의 다리를 스치고 지나갔다. 깊은 상처가 남았다.`);rec(p,'상어가 있는 바다에서 낚시하다 다쳤다',2)}L.push('※ 식량 +8')}},
+  {l:'오늘은 바다에 들어가지 않는다',h:'오늘 낚시 없음',run(L){S.noSeaDay=S.day;L.push('모두 야자숲과 정글로 발길을 돌린다.')}}
+ ]});
+E({id:'crab',k:'바다',ph:[2],cond:()=>S.weather!=='폭풍',title:()=>'큰 썰물',
+ text:()=>'썰물이 크게 빠졌다. 횃불을 비추면 바위틈마다 게가 보인다. 바위는 미끄럽다.',
+ opts:()=>[
+  {l:'횃불을 들고 나간다',h:'식량 +5쯤 · 미끄러질 수 있다',run(L){const t=vol(p=>p.sk.fish+p.t.stamina,4);L.push(`${jn(t,'이/가')} 횃불을 들고 바위로 간다.`);const g=3+t.length*1.2;S.food+=g;S.menu.crab=1;L.push('바위틈마다 게 다리가 사각거린다.');L.push(`※ 식량 +${f1(g)}`);if(chance(.15))injure(pick(t),L,'미끄러운 바위에서 넘어졌다.')}},
+  {l:'아침에 남은 것만 줍는다',h:'식량 +2 · 안전',run(L){S.food+=2;L.push('아침 웅덩이에 갇힌 게 몇 마리를 줍는다.')}}
+ ]});
+E({id:'heat',k:'날씨',ph:[0],cond:()=>S.weather==='폭염',w:()=>2,title:()=>'불볕',
+ text:()=>`볕이 살을 태운다. 아침인데 벌써 모래가 뜨겁다. 물은 ${f1(S.water)}병.`,
+ opts:()=>[
+  {l:'한낮엔 모두 그늘에서 쉰다',h:'오후 일 대신 갈증 덜함',run(L){S.siestaDay=S.day;L.push('오후 내내 그늘에 누워 있기로 한다.');L.push('※ 오늘 밤 갈증이 덜하다. 대신 오후에 모으는 게 거의 없다.')}},
+  {l:'물을 반만 마신다',h:'오늘 밤 물 배급 ½',run(L){S.waterHalfDay=S.day;L.push('물병마다 눈금을 긋는다.');allMor(-4)}},
+  {l:'바닷물에 몸을 적시며 일한다',h:'평소대로',run(L){L.push('셔츠를 바닷물에 적셔 머리에 쓴다.')}}
+ ]});
+E({id:'rain',k:'날씨',ph:[0,1],cond:()=>S.weather==='비',w:()=>2,title:()=>'소나기',
+ text:()=>'하늘이 열린 것처럼 비가 쏟아진다. 다들 하늘을 보고 입을 벌린다.',
+ opts:()=>[
+  {l:'그릇이란 그릇은 다 꺼낸다',h:S.flags.catcher?'물 +6':'물 +3',run(L){const g=S.flags.catcher?6:3;S.water+=g;L.push('코코넛 껍데기, 페트병, 신발까지 줄지어 놓는다.');L.push(`※ 물 +${g}`)}},
+  {l:'빗속에서 몸을 씻는다',h:'사기 ↑ · 감기 조금',run(L){L.push('며칠 만에 소금기를 씻어 낸다. 누군가 노래를 부른다.');allMor(12);for(const p of act())if(chance(.05)&&!p.sick)p.sick=2}}
+ ]});
+E({id:'spoiled',k:'캠프',ph:[2],cond:()=>S.food>6&&!S.flags.smoked,title:()=>'시큼한 냄새',
+ text:()=>`모아 둔 생선에서 시큼한 냄새가 난다. 식량이 ${f1(S.food)}만큼 쌓였는데, 일부는 이미 상한 것 같다.`,
+ opts:()=>[
+  {l:'상한 건 버린다',h:'식량 −40%',run(L){const l=S.food*.4;S.food-=l;L.push(`생선 무더기의 절반 가까이를 바다에 던진다.`);L.push(`※ 식량 −${f1(l)}`)}},
+  {l:'그래도 먹는다',h:'오늘 밤 식중독 위험',run(L){S.badFoodDay=S.day;L.push('불에 오래 구우면 괜찮을 거라고 서로 말한다.')}},
+  ...(S.wood>=2?[{l:'연기에 훈제한다',h:'장작 −2 · 앞으로 안 상함',run(L){S.wood-=2;S.flags.smoked=true;const m=findP(p=>p.job==='요리사')||someone(p=>p.sk.gather);L.push(`${j(m.name,'이/가')} 생선을 갈라 연기 위에 걸어 둔다.`);rec(m,'생선을 훈제해 오래 두는 법을 알려 줬다',2);L.push('※ 이제 식량이 상하지 않는다.')}}]:[])
+ ]});
+E({id:'rats',k:'캠프',ph:[3],cond:()=>S.food>3&&!S.flags.hang,title:()=>'쥐',
+ text:()=>'아침에 보니 식량 자루에 구멍이 났다. 쥐똥이 흩어져 있다. 밤사이 일부를 갉아먹었다.',
+ opts:()=>{const l=S.food*.2;return[
+  {l:'식량을 나무 위에 매단다',h:'앞으로 쥐 걱정 없음',run(L){S.food-=l;S.flags.hang=true;const m=someone(p=>p.sk.build);L.push(`${j(m.name,'이/가')} 식량 자루를 나뭇가지 끝에 매단다.`);L.push(`※ 식량 −${f1(l)}. 다시는 갉아먹히지 않는다.`)}},
+  {l:'어쩔 수 없다',h:`식량 −${f1(l)}`,run(L){S.food-=l;L.push('남은 걸 털어 다시 자루에 담는다.')}}
+ ]}});
+E({id:'project',k:'캠프',ph:[2],cond:()=>S.day>=2&&(!S.flags.catcher||!waterSource()||(S.wood>=3&&S.tools<3)||!S.flags.trap),setup:()=>({p:someone(p=>p.t.coop+p.sk.build)}),title:()=>'오늘 밤의 일',
+ text:c=>`${j(c.p.name,'이/가')} 저녁을 먹고 다 같이 뭔가 하나 만들자고 한다. 할 수 있는 건 하나뿐이다.`,
+ opts:c=>[
+  ...(!S.flags.catcher?[{l:'빗물받이를 만든다',h:'비 올 때 물 ×2',run(L){S.flags.catcher=true;L.push('야자잎을 겹쳐 깔때기를 만든다.');L.push('※ 비 오는 날 모이는 물이 두 배가 된다.')}}]:[]),
+  ...(!waterSource()?[{l:'모래 우물을 판다',h:'성공 40%',run(L){L.push('어깨 깊이까지 모래를 판다.');act().forEach(p=>p.hp-=4);if(chance(.4)){S.flags.well=true;L.push('바닥에 뿌연 물이 스며 나온다. 짭짤하지만 마실 수 있다.');L.push('※ 물 구할 곳이 생겼다.')}else L.push('물은 바닷물처럼 짜다. 구덩이는 밤사이 무너진다.')}}]:[]),
+  ...(!S.flags.trap?[{l:'돌로 물고기 덫을 쌓는다',h:'낚시 +40%',run(L){S.flags.trap=true;const m=someone(p=>p.sk.fish);L.push(`${j(m.name,'이/가')} 물때를 보며 돌 놓을 자리를 정한다.`);act().forEach(p=>p.hp-=3);rec(m,'물고기 덫 쌓는 일을 이끌었다',2);L.push('※ 낚시로 얻는 식량이 늘어난다.')}}]:[]),
+  ...(S.wood>=3&&S.tools<3?[{l:'돌로 도구를 깎는다',h:'도구 +2 · 장작 −3',run(L){S.wood-=3;S.tools+=2;L.push(`${j(c.p.name,'이/가')} 돌 두 개를 맞부딪쳐 날을 세운다.`);L.push('※ 작살 둘, 돌칼 하나.')}}]:[])
+ ].slice(0,3)});
+E({id:'trial',k:'재판',ph:[2],cond:()=>S.thieves.some(t=>P(t.id).alive&&!P(t.id).away&&!P(t.id).exiled),w:()=>3,
+ setup:()=>{const t=S.thieves.find(t=>P(t.id).alive&&!P(t.id).away&&!P(t.id).exiled);S.thieves=S.thieves.filter(x=>x.id!==t.id);return{a:P(t.id),t}},title:()=>'도둑',
+ text:c=>`${j(c.a.name,'이/가')} ${j(c.t.what,'을/를')} 훔친 일로 불 앞에 섰다. ${c.a.t.charisma>.6?'배가 고파서 그랬다고, 다들 그렇지 않냐고 말한다.':'고개를 숙이고 아무 말도 하지 않는다.'} ${c.a.st.caught>1?`벌써 ${c.a.st.caught}번째다.`:''}`,
+ opts:c=>{const a=c.a;return[
+  {l:'모두의 투표에 맡긴다',h:'섬 사람들이 정한다',run(L){const v={용서:0,굶기기:0,추방:0};for(const o of act()){if(o===a)continue;const k=o.rel[a.id]+o.t.empathy*30-o.t.temper*20-(a.st.caught-1)*10+r()*14;v[k>12?'용서':k>-14?'굶기기':'추방']++}
+   L.push(`용서 ${v['용서']} · 하루 굶기기 ${v['굶기기']} · 추방 ${v['추방']}`);const res=Object.keys(v).sort((x,y)=>v[y]-v[x])[0];
+   if(res==='용서'){L.push(`※ ${j(a.name,'은/는')} 용서받았다.`);for(const o of act())if(o!==a)rel(a,o,6)}else if(res==='굶기기'){a.noFood=true;L.push(`※ ${j(a.name,'은/는')} 오늘 밤 공동 몫을 받지 못한다.`)}else{L.push(`${j(a.name,'은/는')} 어둠 속으로 걸어간다.`);exileP(a,L)}}},
+  {l:'용서한다',h:'관계 회복 · 다시 할 수도',run(L){L.push(`${j(a.name,'이/가')} 고개를 숙인다.`);for(const o of act())if(o!==a)rel(a,o,8);a.t.greed=clamp(a.t.greed-.1,0,1);rec(a,'도둑질을 하고 용서받았다',3);L.push('※ 용서받았다.')}},
+  {l:'하루 굶긴다',h:'오늘 밤 몫 없음',run(L){a.noFood=true;rec(a,'도둑질의 벌로 하루를 굶었다',2);L.push(`※ ${j(a.name,'은/는')} 오늘 밤 아무것도 받지 못한다.`);rel(a,someone(),-5)}},
+  {l:'캠프에서 쫓아낸다',h:'혼자 살아야 한다',run(L){L.push('아무도 그를 쳐다보지 않는다.');exileP(a,L)}}
+ ]}});
+E({id:'recall',k:'재판',ph:[2],cond:()=>exl().length>0,w:()=>1.5,setup:()=>({a:exl()[0]}),title:()=>'야자숲 너머의 불빛',
+ text:c=>`쫓겨난 ${j(c.a.name,'이/가')} 야자숲 너머에서 혼자 불을 피우고 있다. 체력 ${Math.round(c.a.hp)}. 다시 받아들이자는 말이 나온다.`,
+ opts:c=>[
+  {l:'다시 받아들인다',h:'',run(L){c.a.exiled=false;L.push(`${j(c.a.name,'이/가')} 젖은 눈으로 불가에 앉는다.`);rec(c.a,'추방됐다가 다시 받아들여졌다',3);for(const o of act())if(o!==c.a)rel(c.a,o,8);L.push('※ 캠프로 돌아왔다.')}},
+  {l:'투표에 맡긴다',h:'섬 사람들이 정한다',run(L){let y=0,n=0;for(const o of act())(o.rel[c.a.id]+o.t.empathy*35+r()*12>8?y++:n++);L.push(`받아들이자 ${y} · 안 된다 ${n}`);if(y>n){c.a.exiled=false;L.push('※ 캠프로 돌아왔다.');rec(c.a,'추방됐다가 투표로 받아들여졌다',3)}else L.push('※ 아직은 안 된다.')}},
+  {l:'아직 안 된다',h:'',run(L){L.push('야자숲 너머의 불빛은 그날 밤 일찍 꺼진다.');c.a.mor-=10}}
+ ]});
+E({id:'hoard',k:'재판',ph:[2],cond:()=>S.rule!=='none'&&act().some(p=>p.stash.food+p.stash.water>=1.5),setup:()=>({p:someone(p=>p.t.temper)}),title:()=>'숨긴 식량',
+ text:c=>`${j(c.p.name,'이/가')} 누군가 공동 식량을 몰래 숨기고 있다고 속삭인다. 누구인지는 말하지 않는다.`,
+ opts:c=>[
+  {l:'모두의 짐을 뒤진다',h:'숨긴 걸 찾는다 · 서로 의심',run(L){L.push('한 사람씩 짐을 펼쳐 보인다.');const h=act().filter(p=>p.stash.food+p.stash.water>=1.2).sort((a,b)=>(b.stash.food+b.stash.water)-(a.stash.food+a.stash.water));
+   for(const p of h.slice(0,3)){const tot=p.stash.food+p.stash.water;S.food+=p.stash.food;S.water+=p.stash.water;p.stash.food=0;p.stash.water=0;L.push(`${p.name}의 잠자리 밑에서 ${f1(tot)}만큼이 나온다.`);for(const o of act())if(o!==p)rel(o,p,-10);rec(p,'숨겨 둔 식량을 들켰다',2);S.thieves.push({id:p.id,d:S.day,what:'공동 식량'})}
+   if(!h.length)L.push('아무것도 나오지 않는다. 냉기만 남는다.');else L.push('※ 찾아낸 것은 창고로 돌아갔다.');for(const a of act())for(const b of act())if(a!==b)rel(a,b,-1)}},
+  {l:'밤 보초를 세운다',h:'사흘 동안 도둑질이 잘 들킨다',run(L){S.watchDays=3;L.push('막대기에 순번을 새겨 모래에 꽂는다.');act().forEach(p=>p.hp-=2)}},
+  {l:'소문을 덮는다',h:'',run(L){L.push(`${j(c.p.name,'은/는')} 혀를 찬다.`);for(const o of act())rel(c.p,o,-2)}}
+ ]});
+E({id:'water_who',k:'재판',ph:[0,2],cond:()=>S.flags.waterMissing!=null&&P(S.flags.waterMissing).alive&&!P(S.flags.waterMissing).away,w:()=>2.5,setup:()=>{const real=P(S.flags.waterMissing);S.flags.waterMissing=null;return{real}},title:()=>'모자란 물',
+ text:()=>'아침보다 물이 적다. 분명히 누군가 마셨다. 물통 둘레에 사람들이 모인다.',
+ opts:c=>{const L2=leader(),acc=findP(p=>p.accountant);return[
+  {l:'범인을 찾는다',h:'누명을 쓸 수도 있다',run(L){const ps=act();const sus=best(ps,p=>-avgRel(p)+(p===c.real?8:0)+r()*14);L.push(`누군가 ${sus.name}의 이름을 꺼낸다. 다른 사람들이 고개를 끄덕인다.`);for(const o of ps)if(o!==sus)rel(o,sus,-12);
+   if(sus===c.real){L.push(`${j(sus.name,'은/는')} 결국 털어놓는다.`);S.thieves.push({id:sus.id,d:S.day,what:'공동 물'})}
+   else{L.push(`${j(sus.name,'은/는')} 끝까지 아니라고 한다.`);L.push(`※ 실제로 물을 가져간 사람은 ${c.real.name}였다. 그는 가장 크게 고개를 끄덕였다.`);rec(sus,'물을 훔쳤다는 누명을 썼다',3);rec(c.real,`자신이 한 일을 ${sus.name}에게 덮어씌웠다`,3)}}},
+  ...((acc||L2)?[{l:`물통을 ${(acc||L2).name}에게 맡긴다`,h:'닷새 동안 도둑질이 잘 들킨다',run(L){S.watchDays=5;const k=acc||L2;L.push(`${j(k.name,'이/가')} 물통마다 손톱으로 눈금을 긋는다.`);rec(k,'물통 관리를 맡았다',1)}}]:[]),
+  {l:'덮고 넘어간다',h:'',run(L){L.push('다들 서로의 입술만 쳐다본다.')}}
+ ]}});
+E({id:'elect',k:'정치',ph:[2],cond:()=>!leader()&&S.day>=3&&act().length>=4,setup:()=>({cap:findP(p=>p.captain)}),title:()=>'누가 정하나',
+ text:()=>'결정할 일이 너무 많다. 오늘도 장작을 누가 할지로 한 시간을 싸웠다. 누군가 이끌어야 한다는 말이 나온다.',
+ opts:c=>[
+  {l:'투표로 뽑는다',h:'가장 믿음 가는 사람',run(L){electVote(L)}},
+  ...(c.cap?[{l:`${c.cap.name} 선장에게 맡긴다`,h:'나이와 경험',run(L){setLeader(c.cap,'vote');log(`${j(c.cap.name,'이/가')} 섬의 지도자가 됐다.`,'pol');L.push(`${j(c.cap.name,'이/가')} 고개를 끄덕인다. "그럼 내일부터 당번을 정하지."`);for(const o of act())if(o.t.brave>.7&&o!==c.cap)rel(o,c.cap,-6);L.push(`※ ${j(c.cap.name,'이/가')} 지도자다.`)}}]:[]),
+  {l:'지도자 없이 지낸다',h:'나흘 동안 지도자가 안 생김',run(L){S.noLeaderUntil=S.day+4;L.push('누구도 남 위에 서지 않기로 한다. 일은 모래 위에 적어 둔다.')}}
+ ]});
+E({id:'leader_greed',k:'정치',ph:[2],cond:()=>{const L=leader();return L&&S.day-S.leaderSince>=2&&(L.stash.food+L.stash.water>1.2||S.rule==='leader'||avgRel(L)<0)},w:()=>{const L=leader();return L&&avgRel(L)<0?2.5:1},
+ setup:()=>{const L=leader();const cr=best(act().filter(p=>p!==L),p=>-p.rel[L.id]+p.t.temper*20);return cr?{L,cr}:null},title:()=>'지도자의 몫',
+ text:c=>`${c.L.name}의 몫이 늘 크다는 불만이 나온다. ${j(c.cr.name,'이/가')} 모두 앞에서 대놓고 말한다. "당신은 오늘 뭘 했는데?"`,
+ opts:c=>[
+  {l:'불신임 투표를 한다',h:'과반이면 물러난다',run(L){L.push(`${j(c.L.name,'이/가')} 모두의 앞에 선다.`);impeach(L,c.L)}},
+  {l:`${c.L.name}의 해명을 듣는다`,h:'말솜씨에 달렸다',run(L){if(chance(.3+c.L.t.charisma*.6)){L.push(`${j(c.L.name,'이/가')} 오늘 한 일을 하나하나 짚는다. 고개를 끄덕이는 사람이 늘어난다.`);for(const o of act())rel(o,c.L,5);rel(c.cr,c.L,-5)}else{L.push(`${c.L.name}의 해명은 길고, 아무도 설득되지 않는다.`);for(const o of act())rel(o,c.L,-6)}}},
+  {l:'그냥 넘어간다',h:'',run(L){L.push(`${j(c.cr.name,'은/는')} 침을 뱉고 자리를 뜬다.`);rel(c.cr,c.L,-12)}}
+ ]});
+E({id:'rule_debate',k:'규칙',ph:[2],cond:()=>S.day>=2&&act().length>=4&&S.day-S.ruleHist[S.ruleHist.length-1].d>=2,setup:()=>{const w=pairWorst();return w?{a:w.a,b:w.b}:null},title:()=>'배급 싸움',
+ text:c=>`배급을 두고 ${wa(c.a)} ${j(c.b.name,'이/가')} 언성을 높인다. 지금 규칙은 '${RULES[S.rule]}'. 어느 쪽으로 투표에 부칠까.`,
+ opts:()=>['equal','work','none','leader'].filter(x=>x!==S.rule&&(x!=='leader'||leader())).slice(0,3).map(x=>({l:{equal:'모두 똑같이 나누자',work:'일한 만큼 먹자',none:'각자 알아서 살자',leader:'지도자에게 맡기자'}[x],h:`투표 · ${RULES[x]}`,run(L){ruleVote(L,x)}}))});
+E({id:'ration',k:'배급',ph:[2],cond:()=>S.rule!=='none'&&S.food<act().length*.5,w:()=>2.5,title:()=>'모자란 한 끼',
+ text:()=>`공동 창고의 식량이 ${f1(S.food)}만큼 남았다. ${act().length}명의 오늘 밤 한 끼에도 모자란다.`,
+ opts:()=>[
+  {l:'사흘간 절반 배급',h:'오래가지만 모두 굶주림',run(L){S.rationMul=.5;S.rationDays=3;const a=findP(p=>p.accountant);if(a)L.push(`${j(a.name,'이/가')} 하루에 쓸 수 있는 양을 모래 위에 계산해 보인다.`);L.push('불평이 나오지만 아무도 반대하지 못한다.');allMor(-6)}},
+  {l:'아프고 약한 사람부터',h:'오늘 밤 약자 우선',run(L){S.tonight='weak';L.push('가장 야윈 사람들 앞에 먼저 접시가 놓인다.');for(const p of act())if(p.hp>70&&p.t.greed>.6)L.push(`${j(p.name,'이/가')} 불만스러운 얼굴로 빈손을 내려다본다.`)}},
+  {l:'오늘 일한 사람부터',h:'오늘 밤 일꾼 우선',run(L){S.tonight='work';L.push('오늘 가장 많이 구해 온 순서대로 줄을 선다.');for(const p of isl().filter(x=>x.sick>0))L.push(`${j(p.name,'은/는')} 줄 맨 끝에 있다.`)}}
+ ]});
+E({id:'medicine',k:'의료',ph:[2,3],cond:()=>S.medicine>=1&&sickCount()>=2,w:()=>2.5,setup:()=>({s:isl().filter(p=>p.sick>0)}),title:()=>'약 한 통',
+ text:c=>`구급상자의 약은 한 사람분. 열이 오른 사람은 ${names(c.s)}.`,
+ opts:c=>[
+  {l:'가장 위급한 사람에게',h:'',run(L){give1(L,c.s,best(c.s,p=>-p.hp))}},
+  {l:'가장 일을 잘하는 사람에게',h:'섬에 쓸모 있는 사람',run(L){give1(L,c.s,best(c.s,p=>p.sk.fish+p.sk.gather+p.sk.build))}},
+  {l:'아껴 둔다',h:'더 급할 때를 위해',run(L){L.push('약은 다시 구급상자에 들어간다.');for(const p of c.s)p.mor-=5}}
+ ]});
+function give1(L,s,who){S.medicine--;who.sick=0;who.hp=clamp(who.hp+15,0,100);L.push(`※ ${j(who.name,'이/가')} 약을 먹는다. 이틀 뒤 열이 내린다.`);rec(who,'마지막 약을 받았다',2);for(const o of s)if(o!==who){rel(o,who,-6);L.push(`${j(o.name,'은/는')} 아무 말도 하지 않는다.`)}}
+E({id:'quarantine',k:'의료',ph:[2],cond:()=>sickCount()>=1&&S.quarantineDays<=0,w:()=>sickCount()>=2?2:1,setup:()=>({s:isl().filter(p=>p.sick>0)}),title:()=>'열병',
+ text:c=>`${jn(c.s,'이/가')} 열이 펄펄 끓는다. 옆에서 자던 사람들이 슬금슬금 자리를 옮긴다.`,
+ opts:c=>[
+  {l:'캠프 끝으로 격리한다',h:'사흘 동안 안 퍼짐 · 환자 사기 ↓',run(L){S.quarantineDays=3;L.push(`${jn(c.s,'을/를')} 캠프 끝으로 옮긴다.`);c.s.forEach(p=>p.mor-=12);const k=findP(o=>o.t.empathy>.7&&!o.sick);if(k){L.push(`${j(k.name,'이/가')} 밤마다 몰래 물을 갖다 준다.`);c.s.forEach(p=>rel(p,k,8))}}},
+  {l:'모두 함께 돌본다',h:'빨리 낫지만 더 퍼질 수 있다',run(L){S.flags.closeCare=S.day;c.s.forEach(p=>{p.sick=Math.max(1,p.sick-2);p.mor+=8});L.push('돌아가며 젖은 천을 갈아 준다.')}}
+ ]});
+E({id:'fight',k:'갈등',ph:[0,1,2],cond:()=>{const w=pairWorst();return w&&w.v<-70},w:()=>2,setup:()=>{const w=pairWorst();return{a:w.a,b:w.b}},title:()=>'멱살',
+ text:c=>`${wa(c.a)} ${c.b.name} 사이가 끝내 터졌다. ${j(c.a.name,'이/가')} ${c.b.name}의 멱살을 잡는다. 다들 지켜보고 있다.`,
+ opts:c=>[
+  {l:'둘을 앉혀 이야기하게 한다',h:'풀릴 수도, 더 꼬일 수도',run(L){const m=findP(p=>p.job==='초등학교 교사'&&p!==c.a&&p!==c.b)||someone(p=>p.t.empathy);L.push(`${j(m.name,'이/가')} 둘 사이에 앉는다.`);if(chance(.55+m.t.empathy*.2)){mutual(c.a,c.b,30);L.push('한참 뒤 둘이 동시에 웃음을 터뜨린다. 처음부터 별일 아니었다.');rec(m,`${wa(c.a)} ${c.b.name}을 화해시켰다`,2)}else{mutual(c.a,c.b,-10);L.push('대화는 고성으로 끝난다.')}}},
+  {l:'둘을 떼어 놓는다',h:'',run(L){L.push(`${j(c.a.name,'은/는')} 바다로, ${j(c.b.name,'은/는')} 정글로 보낸다.`);mutual(c.a,c.b,5)}},
+  {l:'내버려 둔다',h:'누군가 다친다',run(L){const loser=chance(c.a.t.stamina/(c.a.t.stamina+c.b.t.stamina))?c.b:c.a;const win=loser===c.a?c.b:c.a;L.push('주먹이 오간다. 아무도 말리지 않는다.');loser.inj=ri(2,5);L.push(`${j(loser.name,'이/가')} 모래 위에 쓰러진다.`);for(const o of act())if(o!==win&&o!==loser)rel(o,win,-5);rec(win,`${loser.name}${hasB(loser.name)?'과':'와'} 싸워 다치게 했다`,2)}}
+ ]});
+E({id:'pair',k:'관계',ph:[2],cond:()=>{const b=pairBest();return b&&b.v>110},setup:()=>{const b=pairBest();return{a:b.a,b:b.b}},title:()=>'단짝',
+ text:c=>`${wa(c.a)} ${c.b.name}은 요즘 늘 붙어 다닌다. 낚시도 같이, 물 긷기도 같이. 같은 쉼터 구석에서 잔다.`,
+ opts:c=>[
+  ...(S.wood>=1?[{l:'둘에게 작은 쉼터를 따로 지어 준다',h:'장작 −1 · 사기 ↑',run(L){S.wood-=1;L.push('야자잎 지붕 하나가 더 생긴다. 누군가 신혼집이라고 놀린다.');allMor(5)}}]:[]),
+  {l:'둘을 놀린다',h:'모두 웃는다 · 둘은 머쓱',run(L){L.push('저녁 내내 둘을 두고 농담이 오간다.');allMor(6);mutual(c.a,c.b,-3)}},
+  {l:'모른 척한다',h:'',run(L){L.push('둘은 오늘도 나란히 앉아 불을 본다.')}}
+ ]});
+E({id:'cry',k:'마음',ph:[1,2],cond:()=>act().some(p=>p.mor<22),setup:()=>({p:best(act(),p=>-p.mor)}),title:()=>'해변의 울음',
+ text:c=>`${j(c.p.name,'이/가')} 해변에 주저앉아 운다. 집에 가고 싶다고, 이제 못 하겠다고.`,
+ opts:c=>{const k=best(act().filter(x=>x!==c.p),x=>x.t.empathy+x.rel[c.p.id]/100);return[
+  ...(k?[{l:`${j(k.name,'이/가')} 곁에 앉는다`,h:'사기 크게 ↑',run(L){L.push(`${j(k.name,'이/가')} 아무 말 없이 옆에 앉는다.`);L.push('한참 뒤 둘이 같이 바다를 본다.');c.p.mor=clamp(c.p.mor+28,0,100);mutual(c.p,k,15);rec(k,`무너진 ${c.p.name} 곁을 지켰다`,2)}}]:[]),
+  {l:'일을 맡겨 정신을 돌린다',h:'사기 조금 ↑',run(L){L.push(`${j(c.p.name,'은/는')} 장작을 패며 눈물을 닦는다.`);c.p.mor=clamp(c.p.mor+10,0,100)}},
+  {l:'혼자 있게 둔다',h:'',run(L){L.push('파도가 그 울음소리를 덮는다.');c.p.mor=clamp(c.p.mor+3,0,100)}}
+ ]}});
+E({id:'elder',k:'마음',ph:[2],cond:()=>{const c=findP(p=>p.captain);return c&&c.hp<45},w:()=>2,setup:()=>({c:findP(p=>p.captain)}),title:()=>'노선장',
+ text:c=>`${c.c.name}의 숨이 거칠다. 일흔 넘은 몸이 버티기 힘든 모양이다. 그는 자기 몫을 젊은 사람에게 주라고 한다.`,
+ opts:c=>[
+  {l:'몫을 더 챙겨 준다',h:'선장 회복 · 누군가 불만',run(L){c.c.hp=clamp(c.c.hp+12,0,100);c.c.sat=clamp(c.c.sat+20,0,100);S.food=Math.max(0,S.food-1);L.push('모두 한 입씩 덜어 그의 그릇에 담는다.');for(const o of act())if(o.t.greed>.65&&o!==c.c){rel(o,c.c,-6);L.push(`${j(o.name,'은/는')} 끝내 덜어 주지 않는다.`);break}}},
+  {l:'그가 원하는 대로 한다',h:'선장 몫을 다른 사람에게',run(L){c.c.noFood=true;L.push(`${j(c.c.name,'이/가')} 웃으며 자기 그릇을 옆으로 민다.`);rec(c.c,'자기 몫을 젊은 사람들에게 양보했다',3);for(const o of act())rel(o,c.c,8)}}
+ ]});
+E({id:'two_fires',k:'갈등',ph:[2],cond:()=>{const L=leader();return L&&act().filter(p=>p!==L&&p.rel[L.id]<-15).length>=3},w:()=>2,setup:()=>({L:leader()}),title:()=>'두 개의 불',
+ text:c=>`저녁이 되자 불이 두 개 켜졌다. 한쪽은 ${c.L.name} 곁, 한쪽은 그 반대편. 사람들이 어느 쪽에 앉을지 눈치를 본다.`,
+ opts:c=>[
+  ...(S.wood>=2?[{l:'화해의 잔치를 연다',h:'장작 −2 · 식량 −1',run(L){S.wood-=2;S.food=Math.max(0,S.food-1);L.push('두 불을 하나로 합친다. 아껴 둔 게를 꺼낸다.');for(const a of act())for(const b of act())if(a!==b)rel(a,b,3);for(const o of act())rel(o,c.L,4)}}]:[]),
+  {l:'반대편의 말을 들어 본다',h:'불신임 투표',run(L){impeach(L,c.L)}},
+  {l:'그대로 둔다',h:'갈라진 채로',run(L){L.push('그날 밤 두 불 사이에는 아무도 오가지 않는다.');for(const o of act())if(o.rel[c.L.id]<0)rel(o,c.L,-4)}}
+ ]});
+E({id:'birthday',k:'관계',ph:[2],cond:()=>S.day>=3,w:()=>.6,setup:()=>{const c=act().filter(p=>!(S.flags.bd||[]).includes(p.id));if(!c.length)return null;const p=pick(c);S.flags.bd=(S.flags.bd||[]).concat(p.id);return{p}},title:c=>'생일',
+ text:c=>`${j(c.p.name,'이/가')} 지나가듯 말한다. 오늘이 생일이라고. 뭍에 있었으면 가족이 미역국을 끓였을 거라고.`,
+ opts:c=>[
+  ...(S.food>=1?[{l:'남은 걸 모아 축하한다',h:'식량 −1 · 모두 사기 ↑',run(L){S.food-=1;L.push('코코넛 반쪽에 과자 부스러기를 쌓고 나뭇가지 초를 꽂는다.');L.push('열 몇 명이 박자도 안 맞게 생일 노래를 부른다.');allMor(12);for(const o of act())rel(c.p,o,6)}}]:[]),
+  {l:'조개 목걸이를 선물한다',h:'그 사람 사기 ↑',run(L){const g=someone(p=>p.rel[c.p.id]);L.push(`${j(g.name,'이/가')} 몰래 꿰어 둔 조개 목걸이를 건넨다.`);c.p.mor=clamp(c.p.mor+20,0,100);mutual(c.p,g,15)}},
+  {l:'조용히 넘긴다',h:'',run(L){L.push(`${j(c.p.name,'은/는')} 혼자 웃으며 별을 본다.`)}}
+ ]});
+E({id:'mourn',k:'마음',ph:[2,3],cond:()=>S.lastDeath>0&&S.day-S.lastDeath<=1&&S.mourned<S.lastDeath,w:()=>3,setup:()=>{S.mourned=S.lastDeath;const d=S.people.filter(p=>!p.alive&&p.death.d===S.lastDeath&&!p.st.raft);return d.length?{d}:null},title:()=>'떠난 사람',
+ text:c=>`${jn(c.d,'이/가')} 더는 일어나지 않았다. 남은 사람들이 해변에 모였다.`,
+ opts:c=>[
+  {l:'해변에 돌무덤을 쌓는다',h:'사기 ↑ · 하루가 간다',run(L){L.push('파도가 닿지 않는 곳에 돌을 쌓는다.');L.push('이름을 부를 때마다 누군가 돌 하나를 올린다.');allMor(10)}},
+  {l:'가장 가까웠던 사람이 말을 한다',h:'',run(L){for(const d of c.d){const f=best(act(),p=>p.rel[d.id]);if(f){L.push(`${j(f.name,'이/가')} ${d.name} 이야기를 한다. ${d.job}였다고, ${d.bio.split('.')[0]}고.`);f.mor=clamp(f.mor+8,0,100)}}allMor(6)}},
+  {l:'슬퍼할 틈이 없다',h:'바로 일한다',run(L){L.push('아무도 울지 않는다. 다들 하던 일로 돌아간다.');allMor(-6)}}
+ ]});
+E({id:'lazy',k:'갈등',ph:[2],cond:()=>S.rule!=='none'&&act().some(p=>p.hp>60&&p.dayContrib<.3&&!p.sick),setup:()=>{const p=best(act().filter(p=>p.hp>60&&p.dayContrib<.3&&!p.sick),p=>p.hp);const q=best(act().filter(x=>x!==p),x=>x.dayContrib);return p&&q?{p,q}:null},title:()=>'그늘의 사람',
+ text:c=>`${j(c.p.name,'은/는')} 오늘 하루 종일 그늘에 누워 있었다. ${j(c.q.name,'이/가')} 왜 저 사람 몫까지 줘야 하냐고 따진다.`,
+ opts:c=>[
+  {l:'오늘 몫을 주지 않는다',h:'',run(L){c.p.noFood=true;rel(c.p,c.q,-15);L.push(`${j(c.p.name,'은/는')} 그날 밤 빈손으로 잔다.`);rec(c.p,'일하지 않아 하루 몫을 받지 못했다',2)}},
+  {l:'할 일을 정해 준다',h:'앞으로 덜 쉰다',run(L){c.p.t.coop=clamp(c.p.t.coop+.2,0,1);c.p.lazy=false;L.push(`${j(c.p.name,'은/는')} 내일부터 물 긷기 당번이다.`)}},
+  {l:'쉴 이유가 있겠지',h:'',run(L){rel(c.q,c.p,-8);c.p.lazy=true;L.push(`${j(c.q.name,'은/는')} 투덜대며 돌아선다.`)}}
+ ]});
+E({id:'phone',k:'구조',ph:[1,2],once:true,cond:()=>!!findP(p=>p.phone)&&S.day>=3,setup:()=>({p:findP(p=>p.phone)}),title:()=>'배터리 4%',
+ text:c=>`${j(c.p.name,'이/가')} 젖은 휴대폰을 사흘 동안 말렸다. 화면이 켜진다. 배터리 4%. 신호는 없다. 한 번만 쓸 수 있다.`,
+ opts:c=>[
+  {l:'언덕 꼭대기에서 구조 문자를 보낸다',h:'아주 가끔 신호가 잡힌다',run(L){L.push(`${j(c.p.name,'이/가')} 언덕 가장 높은 바위에 올라 휴대폰을 하늘로 든다.`);L.push('전송 중… 전송 중…');if(chance(.2)){S.rescueIn=2;S.rescueHow='phone';L.push('화면에 체크 표시 하나가 뜬다. 그리고 꺼진다.');rec(c.p,'꺼지기 직전의 휴대폰으로 구조 문자를 보냈다',4);L.push('※ 문자가 나갔다.')}else{L.push('전송 실패. 화면이 꺼진다.');allMor(-6)}}},
+  {l:'가족에게 남길 영상을 찍는다',h:'모두 사기 ↑',run(L){L.push('한 사람씩 카메라 앞에서 30초씩 말한다.');L.push('배터리가 다 될 때까지.');allMor(15)}},
+  {l:'모두 모여 사진 한 장을 찍는다',h:'',run(L){L.push('열 몇 명이 해변에 줄지어 선다. 누군가 브이를 한다.');allMor(6);rec(c.p,'섬에서 마지막 사진을 찍었다',1)}}
+ ]});
+E({id:'ledger',k:'규칙',ph:[2],once:true,cond:()=>!!findP(p=>p.accountant)&&S.rule!=='none',setup:()=>({a:findP(p=>p.accountant)}),title:()=>'장부',
+ text:c=>`${j(c.a.name,'이/가')} 조개껍데기와 나뭇가지로 식량 장부를 만들자고 한다. 누가 무엇을 가져왔고 얼마를 먹었는지.`,
+ opts:c=>[
+  {l:'장부를 만든다',h:'빼돌리면 잘 들킨다',run(L){S.flags.ledger=true;L.push('모래 위에 열네 칸이 그어진다.');for(const o of act())if(o.t.greed>.65&&o!==c.a)rel(o,c.a,-8);rec(c.a,'섬의 식량 장부를 만들었다',2);L.push('※ 이제 몰래 빼돌리기 어렵다.')}},
+  {l:'귀찮다',h:'',run(L){L.push(`${j(c.a.name,'은/는')} 혼자서라도 머릿속에 적어 둔다.`)}}
+ ]});
+E({id:'teach',k:'생활',ph:[2],once:true,cond:()=>act().length>=3,setup:()=>({m:best(act(),p=>p.sk.fish)}),title:()=>'매듭',
+ text:c=>`${j(c.m.name,'이/가')} 낚시가 서툰 사람들을 보다 못해 한마디 한다. 내일 아침 가르쳐 줄 수 있다고.`,
+ opts:c=>[
+  {l:'다 같이 배운다',h:'모두 낚시 실력 ↑',run(L){L.push(`${j(c.m.name,'이/가')} 매듭 묶는 법부터 보여 준다.`);L.push('물때 읽는 법, 그림자를 물에 드리우지 않는 법.');for(const o of act())if(o!==c.m){o.sk.fish=clamp(o.sk.fish+.1,0,1);rel(o,c.m,5)}rec(c.m,'다른 사람들에게 낚시를 가르쳤다',2)}},
+  {l:'각자 하던 대로',h:'',run(L){L.push(`${j(c.m.name,'은/는')} 어깨를 으쓱한다.`)}}
+ ]});
+E({id:'quiet',k:'생활',ph:[2],cond:()=>S.fire&&S.day>=2,w:()=>.7,title:()=>'조용한 저녁',
+ text:()=>'아무도 말이 없는 저녁이다. 불꽃 튀는 소리만 난다. 누군가 먼저 입을 떼기를 기다린다.',
+ opts:()=>[
+  {l:'누군가 노래를 시작한다',h:'사기 ↑ · 관계 ↑',run(L){const c=best(act(),p=>p.t.charisma);L.push(`${j(c.name,'이/가')} 먼저 노래를 시작한다. 하나둘 따라 부른다.`);L.push('아는 노래가 별로 겹치지 않는다. 그래도 웃음이 난다.');for(const a of act()){a.mor=clamp(a.mor+12,0,100);for(const b of act())if(a!==b)rel(a,b,2)}}},
+  {l:'각자 집 이야기를 한다',h:'가까워지지만 마음이 아프다',run(L){const p=someone();L.push(`${j(p.name,'이/가')} 딸 이야기를 하다 말을 멈춘다.`);for(const a of act()){a.mor=clamp(a.mor+(chance(.5)?8:-6),0,100);for(const b of act())if(a!==b)rel(a,b,3)}}},
+  {l:'일찍 잔다',h:'모두 체력 +6',run(L){L.push('불을 낮추고 눕는다. 파도 소리만 들린다.');isl().forEach(p=>p.hp=clamp(p.hp+6,0,100))}}
+ ]});
+
+function eventPool(slots){return EV.filter(e=>(!e.ph||e.ph.some(x=>slots.includes(x)))&&!(e.once&&S.evLast[e.id]!=null)&&(S.evLast[e.id]==null||S.day-S.evLast[e.id]>=4)&&safe(e.cond))}
+function safe(f){try{return !!f()}catch(e){return false}}
+function makeInst(e,slots){const ctx=e.setup?e.setup():{};if(ctx===null||ctx===undefined)return null;const opts=e.opts(ctx);if(!opts||opts.length<2)return null;return{e,ctx,k:e.k,title:e.title(ctx),text:e.text(ctx),opts:opts.map(o=>({l:o.l,h:o.h,run:o.run})),day:S.day,ph:(e.ph||slots).filter(x=>slots.includes(x)).pop()}}
+function maybeEvent(ph){
+  if(act().length<2)return null;
+  const slots=ph===0?[0,1]:ph===1?[1,2]:ph===3?[3,0]:[];if(!slots.length)return null;
+  const pool=eventPool(slots);
+  const forced=pool.filter(e=>e.force);
+  if(forced.length){const i=makeInst(forced[0],slots);if(i){S.evLast[forced[0].id]=S.day;return i}}
+  if(S.evCool>0){S.evCool--;return null}
+  if(!chance(.27))return null;
+  const tmp=pool.slice();
+  while(tmp.length){
+    const ws=tmp.map(e=>e.w?Math.max(.05,e.w()):1);let x=r()*ws.reduce((a,b)=>a+b,0),k=0;for(;k<tmp.length;k++){x-=ws[k];if(x<=0)break}k=Math.min(k,tmp.length-1);
+    const e=tmp.splice(k,1)[0];const inst=makeInst(e,slots);if(inst){S.evLast[e.id]=S.day;S.evCool=3;return inst}
+  }
+  return null;
+}
+function tick(){
+  if(S.ended)return null;
+  const ph=S.phase;
+  if(ph<2)workPhase();else if(ph===2)evening();else night();
+  S.lastPh=ph;
+  if(S.ended)return null;
+  return maybeEvent(ph);
+}
+function resolve(inst,i,auto){
+  const o=inst.opts[i];const L=[];const sv=S.phase;S.phase=inst.ph;
+  S.choices.push({d:inst.day,ph:inst.ph,title:inst.title,label:o.l,auto:!!auto});
+  log(`${inst.title} — ${o.l}`,'choice');
+  o.run(L);S.phase=sv;
+  S.now=L.filter(x=>x.startsWith('※')).map(x=>x.slice(1).trim()).slice(-2);
+  return L;
+}
+function forecast(){const cap=act().find(p=>p.captain);if(!cap)return '';const m={폭풍:'바람 냄새가 달라. 내일은 폭풍이 온다.',비:'구름이 낮다. 내일 비가 오겠어.',폭염:'내일은 볕이 독할 거다.',맑음:'내일은 바다가 잔잔하겠군.',흐림:'내일은 흐리겠어.'};return `${cap.name}: "${m[S.next]}"`}
+
+/* ---------- 엔딩 ---------- */
+function endGame(type,how,sameDay){
+  if(S.ended)return;
+  S.ended=true;S.endType=type;S.endHow=how||null;S.endDay=S.day+(type==='rescue'&&!sameDay?1:0);
+  if(type==='rescue')log(how==='raft'?'수평선에 어선 두 척이 나타났다. 뗏목을 탔던 사람이 뱃머리에서 손을 흔든다.':how==='phone'?'아침, 해경 헬기 소리가 섬을 덮었다. 그 문자가 닿았던 것이다.':'해안경비대 배가 섬 앞에 닻을 내렸다.','rescue');
+  else log('섬에는 이제 아무도 남지 않았다.','death');
+}
+function friendOf(p){const o=S.people.filter(x=>x!==p);const b=best(o,x=>p.rel[x.id]);const w=best(o,x=>-p.rel[x.id]);return{b:p.rel[b.id]>25?b:null,w:p.rel[w.id]<-25?w:null}}
+function epilogue(p){
+  const s=p.st,f=friendOf(p);
+  if(s.raft&&p.away)return '구조된 뒤 그는 뗏목을 탄 두 사람 중 한 명으로 신문에 실렸다. 정작 본인은 바다를 다시 보지 않으려 했다.';
+  if(s.leaderDays>=5)return avgRel(p)>5?'돌아온 뒤 인터뷰 요청이 쏟아졌다. 그는 섬에서 내린 결정을 하나하나 설명했고, 후회한 건 하나뿐이라고 했다.':'돌아온 뒤 인터뷰 요청이 쏟아졌지만 그는 한 번도 응하지 않았다. 섬에서 그를 따르던 사람들도 연락하지 않았다.';
+  if(s.stole-s.caught>=2)return '돌아온 뒤에도 그는 섬에서의 밤들에 대해 말하지 않았다. 아무도 묻지 않았고, 아무도 알지 못했다.';
+  if(s.votedOut)return '쫓겨나 혼자 지낸 밤들을 그는 오래 잊지 못했다. 구조선에서도 그는 다른 사람들과 떨어져 앉았다.';
+  if(s.shared>=4)return '그가 덜어 준 몫으로 버틴 사람이 적지 않았다. 몇 년 뒤까지 명절마다 그의 집 앞에 과일 상자가 놓였다.';
+  if(f.b&&!f.b.alive)return `매년 섬을 떠난 날이 오면 그는 ${f.b.name}의 가족에게 꽃을 보낸다.`;
+  if(f.b)return `돌아온 뒤에도 ${wa(f.b)}는 한 달에 한 번 꼭 만난다. 서로의 가족보다 섬 이야기를 먼저 꺼낸다.`;
+  if(f.w)return `구조선 갑판에서 ${wa(f.w)} 눈이 마주쳤을 때, 그는 먼저 고개를 돌렸다.`;
+  const byJob={'어부':'그는 다시 배를 탔다. 남해의 섬 근처를 지날 때마다 엔진을 잠시 끈다고 한다.','간호사':'그는 응급실로 돌아갔다. 탈수 환자를 볼 때마다 손이 먼저 움직인다.','여행 유튜버':'섬 이야기를 담은 영상은 조회수 900만을 넘겼다. 댓글은 끝내 읽지 않았다.','프로그래머':'그는 한동안 휴대폰을 켜지 않았다.','은퇴한 선장':'그는 손주들에게 섬 이야기를 하지 않는다. 대신 날씨 읽는 법을 가르친다.','요리사':'그는 주방으로 돌아갔다. 메뉴에 코코넛 생선 구이가 생겼다.'};
+  return byJob[p.job]||'그는 평범한 일상으로 돌아갔다. 가끔 수돗물을 틀어 놓고 한참을 바라본다.';
+}
+function personSlide(p){
+  const s=p.st,body=[`${p.name}, ${p.job}. ${p.bio}`];
+  const top=p.rec.slice().sort((a,b)=>b.w-a.w||a.d-b.d).slice(0,4).sort((a,b)=>a.d-b.d);
+  if(top.length)body.push(top.map(x=>`${x.d}일째, ${x.t}.`).join(' '));
+  const bits=[];
+  if(s.leaderDays>0)bits.push(`${s.leaderDays}일 동안 섬을 이끌었다`);
+  if(s.shared>=2)bits.push(`자기 몫을 나눈 게 ${s.shared}번이었다`);
+  if(s.stole>0)bits.push(s.caught>=s.stole?`${s.stole}번 훔쳤고 모두 들켰다`:s.caught>0?`${s.stole}번 훔쳤고 ${s.caught}번 들켰다`:`${s.stole}번 남의 것을 가져갔고 한 번도 들키지 않았다`);
+  if(s.fished>6)bits.push(`바다에서 건진 식량이 ${Math.round(s.fished)}끼니였다`);
+  if(s.healed>=3)bits.push(`${s.healed}번 아픈 사람을 일으켜 세웠다`);
+  if(bits.length)body.push(bits.join(', ')+'.');
+  if(!p.alive){body.push(`${p.death.d}일째, ${p.death.cause}로 섬에 남았다.`);const f=friendOf(p);if(f.b&&f.b.alive)body.push(`구조선에 오르기 전, ${j(f.b.name,'이/가')} 해변의 돌무덤 앞에 한참 서 있었다.`)}
+  else body.push(epilogue(p));
+  return{eb:p.alive?'생존':'사망',title:p.name,body,p};
+}
+function endingSlides(){
+  const sv=S.people.filter(p=>p.alive),dd=S.people.filter(p=>!p.alive).sort((a,b)=>a.death.d-b.death.d);const sl=[];
+  if(S.endType==='rescue'){
+    const how={raft:'뗏목을 타고 나간 사람들이 데려온 어선',phone:'꺼지기 직전의 휴대폰 문자를 받은 해경 헬기',plane:'하늘을 돌던 수색기가 부른 해안경비대',ship:'섬을 본 배'}[S.endHow]||'구조선';
+    const b=[`${S.endDay}일째, ${how}이 섬에 닿았다.`.replace('헬기이','헬기가'),`14명 중 ${sv.length}명이 돌아왔다.`];
+    if(S.missed)b.push(`그 전에 배와 비행기가 ${S.missed}번 섬 앞을 지나갔다. 아무도 그들을 보지 못했다.`);
+    b.push(`섬의 규칙: ${S.ruleHist.map(x=>`${x.d}일째 '${RULES[x.rule]}'`).join(' → ')}.`);
+    const ls=S.leaderHist.map(x=>`${P(x.id).name}(${x.d}일째)`);b.push(ls.length?`지도자: ${ls.join(' → ')}.`:'끝까지 아무도 섬을 이끌지 않았다.');
+    sl.push({eb:'구조',title:sv.length>=10?'거의 모두가 돌아왔다':sv.length>=6?'절반 넘게 돌아왔다':sv.length>=1?'몇 사람만 돌아왔다':'아무도 돌아오지 못했다',body:b});
+  }else sl.push({eb:'전멸',title:'섬에는 아무도 남지 않았다',body:[`${S.day}일째, 마지막 사람이 숨을 거뒀다.`,S.missed?`그사이 배와 비행기가 ${S.missed}번 섬 앞을 지나갔다.`:'구조선은 오지 않았다.'].concat(S.flags.sos?['몇 달 뒤 섬에 닿은 어부들이 해변의 SOS 글자를 발견했다.']:[])});
+  sv.sort((a,b)=>(b.st.leaderDays+b.rec.length)-(a.st.leaderDays+a.rec.length)).forEach(p=>sl.push(personSlide(p)));
+  dd.forEach(p=>sl.push(personSlide(p)));
+  sl.push({eb:'섬이 고른 길',title:'갈림길마다 고른 것들',body:[S.choices.map(c=>`${c.d}일째 ${PH[c.ph]} · ${c.title} → ${c.label}${c.auto?' (맡김)':''}`).join('\n')||'고른 것이 없다.']});
+  return sl;
+}
+function load(s){S=s;rnd=mulberry32((s.seed*2654435761+s.day*97+s.phase*13+(Date.now()&65535))>>>0);S.bub=[];return S}
+G.Core={newGame,load,tick,resolve,forecast,endingSlides,get S(){return S},ZONES,ACTS,RULES,PH,friendOf,avgRel,leader,EV};
+})(window);
+</script>
+
+<script>
+(function(){
+"use strict";
+const C=window.Core,$=id=>document.getElementById(id);
+const cv=$('map'),ctx=cv.getContext('2d');
+const TW=200,TH=140;const terr=document.createElement('canvas');terr.width=TW;terr.height=TH;
+let running=true,speed=1,acc=0,sel=0,modal=false,rain=[],bubbles=new Map(),jMode='all';
+const PHMS={1:4200,3:1500,10:480};
+const SHIRT=['#e4571b','#f2c14e','#4f9d69','#3d7dd8','#c6538c','#8a6fd1','#e08a3c','#2bb3a3','#d9483b','#9bc53d','#5b8def','#c77d4a','#a05195','#f4a259'];
+const f1=v=>(Math.round(v*10)/10).toFixed(1);
+function hash(x,y,s){let h=(x*374761393+y*668265263+s*1442695041)|0;h=Math.imul(h^(h>>>13),1274126177);return((h^(h>>>16))>>>0)/4294967296}
+function genTerrain(seed){
+  const g=terr.getContext('2d'),img=g.createImageData(TW,TH),d=img.data,Z=C.ZONES;
+  const ph=[hash(1,2,seed)*6.28,hash(3,4,seed)*6.28,hash(5,6,seed)*6.28],cx=.5,cy=.53,rx=.43,ry=.43;
+  for(let y=0;y<TH;y++)for(let x=0;x<TW;x++){
+    const nx=x/TW,ny=y/TH,dx=(nx-cx)/rx,dy=(ny-cy)/ry,a=Math.atan2(dy,dx),q=Math.hypot(dx,dy)/(1+.11*Math.sin(3*a+ph[0])+.07*Math.sin(5*a+ph[1])+.04*Math.sin(9*a+ph[2]));
+    const n=hash(x,y,seed);let c;
+    if(q>1.16)c=n<.03?[38,104,124]:[16,70,88];
+    else if(q>1)c=n<.06?[90,170,178]:[46,128,140];
+    else if(q>.87)c=n<.1?[214,196,148]:[231,214,166];
+    else{const hd=Math.hypot(nx-Z.hill.x,(ny-Z.hill.y)*1.2),pd=Math.hypot(nx-Z.palm.x,ny-Z.palm.y);
+      if(hd<.12)c=n<.2?[120,118,108]:hd<.05?[160,156,142]:[138,134,122];
+      else if(pd<.13)c=n<.15?[50,120,60]:n<.25?[120,90,50]:[72,142,70];
+      else c=n<.12?[30,88,48]:n<.2?[58,112,52]:[40,100,52];}
+    const i=(y*TW+x)*4;d[i]=c[0];d[i+1]=c[1];d[i+2]=c[2];d[i+3]=255;
+  }
+  g.putImageData(img,0,0);
+  for(let k=0;k<26;k++){const x=Math.round((Z.palm.x+(hash(k,9,seed)-.5)*.2)*TW),y=Math.round((Z.palm.y+(hash(k,7,seed)-.5)*.18)*TH);g.fillStyle='#2f6b2a';g.fillRect(x-1,y,3,1);g.fillRect(x,y-1,1,3);g.fillStyle='#7a5a32';g.fillRect(x,y+1,1,1)}
+}
+function resize(){const w=cv.parentElement.clientWidth,dpr=Math.min(2,window.devicePixelRatio||1);cv.width=Math.round(w*dpr);cv.height=Math.round(w*dpr*TH/TW);cv.style.height=(w*TH/TW)+'px'}
+function roundRect(x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath()}
+function draw(now){
+  const S=C.S;if(!S)return;const W=cv.width,H=cv.height,s=W/TW,t=now/1000,Z=C.ZONES;
+  while(S.bub.length){const b=S.bub.shift();bubbles.set(b.id,{t:b.t,at:now})}
+  ctx.imageSmoothingEnabled=false;ctx.drawImage(terr,0,0,W,H);
+  const px=(z,dx,dy,w,h,col)=>{ctx.fillStyle=col;ctx.fillRect(Math.round(z.x*TW+dx)*s,Math.round(z.y*TH+dy)*s,w*s,h*s)};
+  if(S.discovered.spring){px(Z.spring,-3,-1,7,3,'#59b7d6');px(Z.spring,-2,-2,5,1,'#8fd3e8')}
+  if(S.discovered.cave){px(Z.cave,-3,-2,7,4,'#4b4a46');px(Z.cave,-2,-1,4,3,'#151515')}
+  if(S.discovered.wreck){px(Z.wreck,-5,-1,10,3,'#6b4a2e');px(Z.wreck,-1,-5,1,4,'#4a3220')}
+  if(S.discovered.north)px(Z.north,-6,0,12,1,'#f3e5bd');
+  if(S.flags.well)px(Z.camp,-12,2,2,2,'#5c7a86');
+  const base=S.flags.cave?Z.cave:Z.camp;
+  if(!S.flags.cave){const huts=Math.max(1,Math.round(S.shelter/22));for(let i=0;i<huts;i++){const dx=-8+i*4,dy=-4+(i%2);px(base,dx,dy,3,2,'#8a6a3a');px(base,dx+1,dy-1,1,1,'#a3824a')}}
+  if(S.flags.trap)px(Z.sea,-6,-3,12,1,'#9a948a');
+  if(S.flags.sos){ctx.fillStyle='rgba(40,30,20,.85)';ctx.font=`${Math.round(5*s)}px monospace`;ctx.fillText('SOS',(Z.camp.x*TW+10)*s,(Z.camp.y*TH+3)*s)}
+  const flick=.6+.4*Math.sin(t*9)+.2*Math.sin(t*23);
+  if(S.fire){px(base,0,1,2,1,'#5a3a1a');ctx.fillStyle=`rgba(255,${130+flick*60|0},40,.95)`;ctx.fillRect(Math.round(base.x*TW)*s,Math.round(base.y*TH)*s,2*s,s);ctx.fillStyle='rgba(255,170,60,.18)';ctx.beginPath();ctx.arc((base.x*TW+1)*s,(base.y*TH+.5)*s,(7+flick*2)*s,0,7);ctx.fill()}
+  if(S.signal>3){const sz=Math.max(1,Math.round(S.signal/22)),hx=Z.hill.x*TW,hy=Z.hill.y*TH-3;ctx.fillStyle=`rgba(255,${100+flick*80|0},30,.95)`;ctx.fillRect(Math.round(hx-sz/2)*s,Math.round(hy-sz)*s,sz*s,sz*s);
+    for(let i=0;i<Math.min(6,1+sz);i++){const yy=hy-sz-2-i*3-((t*6)%3);ctx.fillStyle=`rgba(200,200,200,${.35-i*.05})`;ctx.fillRect(Math.round(hx+Math.sin(t+i)*1.5)*s,Math.round(yy)*s,2*s,2*s)}}
+  for(const k in Z){if(S.discovered[k])continue;const z=Z[k];for(let i=0;i<14;i++){const a=i/14*6.28+t*.05,rr=4+hash(i,k.length,3)*5;ctx.fillStyle='rgba(225,232,230,.55)';ctx.fillRect(Math.round(z.x*TW+Math.cos(a)*rr-3)*s,Math.round(z.y*TH+Math.sin(a)*rr*.6-2)*s,6*s,4*s)}}
+  S.people.filter(p=>!p.alive&&!p.st.raft).forEach((p,i)=>px(Z.camp,14+(i%5)*3,-6+Math.floor(i/5)*3,2,2,'#7b7468'));
+  const L=C.leader();
+  for(const p of S.people){
+    if(!p.alive||p.away)continue;
+    const busy=p.act==='sleep'?0:p.act==='eat'?.006:.02;
+    const tx=p.tx+Math.sin(t*.7+p.id*1.7)*busy+((p.id%5)-2)*.012,ty=p.ty+Math.sin(t*.9+p.id)*busy*.7+((p.id%3)-1)*.012;
+    p.x+=(tx-p.x)*.035;p.y+=(ty-p.y)*.035;
+    const X=Math.round(p.x*TW),Y=Math.round(p.y*TH);
+    if(p.act==='sleep'){ctx.fillStyle=p.exiled?'#8b8b8b':SHIRT[p.id];ctx.fillRect(X*s,Y*s,3*s,s);ctx.fillStyle='#f0c9a0';ctx.fillRect((X-1)*s,Y*s,s,s)}
+    else{ctx.fillStyle=p.exiled?'#8b8b8b':SHIRT[p.id];ctx.fillRect(X*s,Y*s,2*s,2*s);ctx.fillStyle=p.sick>0?'#b9d77a':'#f0c9a0';ctx.fillRect(X*s,(Y-1)*s,2*s,s);
+      if(p.act==='fish'&&Math.sin(t*2+p.id)>0){ctx.fillStyle='#6b4a2e';ctx.fillRect((X+2)*s,(Y-2)*s,Math.max(1,s*.5),3*s)}
+      if(p.act==='wood'||p.act==='build'){ctx.fillStyle='#7a5a32';ctx.fillRect((X-1)*s,(Y+Math.round(Math.sin(t*6+p.id)))*s,s,s)}}
+    if(L===p){ctx.fillStyle='#ffd34d';ctx.fillRect(X*s,(Y-2)*s,2*s,Math.max(1,s*.6))}
+    if(sel===p.id){ctx.strokeStyle='#fff';ctx.lineWidth=Math.max(1.5,s*.5);ctx.strokeRect((X-1.5)*s,(Y-2.5)*s,5*s,5.5*s)}
+  }
+  const ph=S.phase;
+  if(S.weather==='폭풍'||S.weather==='비'){ctx.fillStyle=S.weather==='폭풍'?'rgba(20,30,45,.35)':'rgba(40,55,70,.18)';ctx.fillRect(0,0,W,H);
+    if(rain.length<(S.weather==='폭풍'?220:110))for(let i=0;i<10;i++)rain.push({x:Math.random()*W,y:Math.random()*H,v:6+Math.random()*6});
+    ctx.strokeStyle='rgba(200,220,235,.55)';ctx.lineWidth=1;ctx.beginPath();for(const d of rain){d.y+=d.v*(W/600);d.x-=d.v*.25;if(d.y>H){d.y=-10;d.x=Math.random()*W*1.2}ctx.moveTo(d.x,d.y);ctx.lineTo(d.x+3,d.y-10)}ctx.stroke()}else rain.length=0;
+  if(S.weather==='폭염'){ctx.fillStyle='rgba(255,200,120,.12)';ctx.fillRect(0,0,W,H)}
+  if(ph===3){ctx.fillStyle='rgba(60,25,45,.25)';ctx.fillRect(0,0,W,H)}
+  if(ph===0&&S.lastPh===3){ctx.fillStyle='rgba(5,10,35,.45)';ctx.fillRect(0,0,W,H)}
+  const fs=Math.max(10,Math.round(W/62));ctx.font=`${fs}px "Gowun Dodum",sans-serif`;ctx.textBaseline='middle';
+  for(const k in Z){if(!S.discovered[k])continue;const z=Z[k],label=z.name,tw=ctx.measureText(label).width;let lx=z.x*W-tw/2,ly=z.y*H+fs*1.5;if(k==='sea')ly=z.y*H-fs*.2;if(k==='north')ly=z.y*H-fs*1.1;
+    lx=Math.max(4,Math.min(W-tw-8,lx));ctx.fillStyle='rgba(8,22,26,.55)';ctx.fillRect(lx-4,ly-fs*.65,tw+8,fs*1.3);ctx.fillStyle='#eef4f2';ctx.fillText(label,lx,ly)}
+  const bf=Math.max(11,Math.round(W/55));ctx.font=`${bf}px "Gowun Dodum",sans-serif`;
+  for(const [id,b] of bubbles){const p=S.people[id];const age=now-b.at;if(age>3800||!p.alive||p.away){bubbles.delete(id);continue}
+    const a=Math.min(1,(3800-age)/500),txt=`${p.name}: ${b.t}`,tw=ctx.measureText(txt).width;let bx=p.x*W-tw/2-6,by=p.y*H-5*s-bf*1.4;bx=Math.max(4,Math.min(W-tw-16,bx));by=Math.max(4,by);
+    ctx.globalAlpha=a;ctx.fillStyle='rgba(250,250,245,.95)';roundRect(bx,by,tw+12,bf*1.5,6);ctx.fill();ctx.fillStyle='#16262b';ctx.fillText(txt,bx+6,by+bf*.78);ctx.globalAlpha=1}
+}
+cv.addEventListener('click',e=>{const S=C.S,rc=cv.getBoundingClientRect(),x=(e.clientX-rc.left)/rc.width,y=(e.clientY-rc.top)/rc.height;let bd=.05,bp=null;for(const p of S.people){if(!p.alive||p.away)continue;const d=Math.hypot(p.x-x,(p.y-y)*.7);if(d<bd){bd=d;bp=p}}if(bp){sel=bp.id;renderSide()}});
+
+function renderTop(){
+  const S=C.S,alive=S.people.filter(p=>p.alive).length;
+  $('clock').innerHTML=`<b>${S.endDay||S.day}일째</b><span class="ph">${C.PH[S.phase]}</span><span>날씨 ${S.weather}</span><span>내일 ${S.people.some(p=>p.alive&&p.captain&&!p.away)?S.next:'알 수 없음'}</span><span>생존 ${alive}/14</span><span>섬 #${S.seed}</span>`;
+  $('mapPhase').textContent=`${S.day}일째 · ${C.PH[S.phase]}`;$('mapWeather').textContent=S.weather+(S.fire?' · 불 켜짐':' · 불 꺼짐');
+  $('now').innerHTML=`<span class="k">지금 섬에서는</span>`+(S.now||[]).map(t=>`<p>${t}</p>`).join('');
+  const n=Math.max(1,S.people.filter(p=>p.alive&&!p.away&&!p.exiled).length);
+  const st=[['식량',f1(S.food),`/${n}명`,S.food<n*.6],['물',f1(S.water),`/${n}명`,S.water<n*.6],['장작',f1(S.wood),'',S.wood<1],['도구·약',`${S.tools}·${S.medicine}`,'',false]];
+  const m=[['쉼터',S.flags.cave?'동굴':Math.round(S.shelter)+'%',S.flags.cave?100:S.shelter,''],['신호',Math.round(S.signal),S.signal,'sig'],['바다',Math.round(S.stocks.fish/S.fishMax*100)+'%',S.stocks.fish/S.fishMax*100,''],['야자숲',Math.round(S.stocks.palm)+'%',S.stocks.palm,'']];
+  $('stats').innerHTML=st.map(([k,v,u,low])=>`<div class="stat${low?' low':''}"><div class="k">${k}</div><div class="v">${v}<small>${u}</small></div></div>`).join('')+m.map(([k,v,pc,c])=>`<div class="stat ${c}"><div class="k">${k}</div><div class="v">${v}</div><div class="meter"><i style="width:${Math.max(0,Math.min(100,pc))}%"></i></div></div>`).join('');
+  const L=C.leader(),ws=S.discovered.spring?'샘':S.flags.well?'모래 우물':'없음 (비·코코넛뿐)';
+  $('rules').innerHTML=`<span class="pill"><b>규칙</b>${C.RULES[S.rule]}${S.rationMul<1?' · 절반 배급':''}</span><span class="pill"><b>지도자</b>${L?L.name:'없음'}</span><span class="pill"><b>물</b>${ws}</span>${S.watchDays>0?'<span class="pill">밤 보초 중</span>':''}${S.quarantineDays>0?'<span class="pill">격리 중</span>':''}`;
+}
+function statusTags(p){const t=[];if(!p.alive)t.push(`<span class="tag bad">${p.death.cause} · ${p.death.d}일</span>`);else if(p.away)t.push('<span class="tag">뗏목으로 떠남</span>');else{if(C.leader()===p)t.push('<span class="tag lead">지도자</span>');if(p.exiled)t.push('<span class="tag bad">추방</span>');if(p.sick>0)t.push('<span class="tag bad">아픔</span>');if(p.inj>0)t.push('<span class="tag bad">부상</span>')}return t.join(' ')}
+function renderRoster(){
+  const S=C.S,ps=S.people.slice().sort((a,b)=>(b.alive-a.alive)||(a.away-b.away)||a.id-b.id);
+  $('aliveCount').textContent=`${S.people.filter(p=>p.alive).length}명 생존`;
+  $('roster').innerHTML=ps.map(p=>`<button class="prow${p.alive?'':' dead'}" data-id="${p.id}" aria-current="${sel===p.id}">
+    <div style="min-width:0"><div class="nm"><strong><i class="dot" style="background:${SHIRT[p.id]}"></i>${p.name}</strong><span>${p.job}</span>${statusTags(p)}</div>
+    <div class="doing">${p.alive&&!p.away?`${C.ZONES[p.zone].name} · ${C.ACTS[p.act]}`:p.away?'바다 위':'—'}</div></div>
+    <div class="bars"><div class="bar hp"><i style="width:${p.alive?p.hp:0}%"></i></div><div class="bar sat"><i style="width:${p.alive?p.sat:0}%"></i></div><div class="bar hyd"><i style="width:${p.alive?p.hyd:0}%"></i></div></div></button>`).join('');
+}
+$('roster').addEventListener('click',e=>{const b=e.target.closest('.prow');if(!b)return;sel=+b.dataset.id;renderSide()});
+function traitWords(p){const t=p.t,w=[t.coop>.65?'협조적':t.coop<.3?'제멋대로':null,t.greed>.65?'욕심 많음':t.greed<.25?'욕심 없음':null,t.brave>.65?'용감함':t.brave<.25?'겁 많음':null,t.charisma>.65?'사람을 끄는 힘':null,t.temper>.65?'다혈질':t.temper<.2?'차분함':null,t.empathy>.68?'정이 많음':t.empathy<.25?'냉정함':null,t.stamina>.8?'체력 좋음':t.stamina<.45?'체력 약함':null];return w.filter(Boolean)}
+function renderDetail(){
+  const S=C.S,p=S.people[sel],fr=C.friendOf(p);
+  const recs=p.rec.slice(-10).reverse().map(x=>`<li><span>${x.d}일</span>${x.t}</li>`).join('')||'<li class="muted">아직 특별한 일이 없다.</li>';
+  const a=C.avgRel(p);
+  $('detail').innerHTML=`<div class="who"><h3>${p.name}</h3><span class="muted">${p.job} ${statusTags(p)}</span></div><p class="bio">${p.bio}</p><div class="traits">${traitWords(p).map(x=>`<span class="tag">${x}</span>`).join('')}</div>
+   <dl class="kv"><dt>지금</dt><dd>${p.alive&&!p.away?`${C.ZONES[p.zone].name}에서 ${C.ACTS[p.act]}`:p.away?'뗏목을 타고 떠났다':`${p.death.d}일째 ${p.death.cause}`}</dd>
+   <dt>체력·포만·수분</dt><dd>${Math.round(p.hp)} · ${Math.round(p.sat)} · ${Math.round(p.hyd)}</dd><dt>사기</dt><dd>${Math.round(p.mor)}</dd>
+   <dt>어젯밤 먹은 것</dt><dd>식량 ${f1(p.ateF)} · 물 ${f1(p.ateW)}</dd><dt>개인 비축</dt><dd>식량 ${f1(p.stash.food)} · 물 ${f1(p.stash.water)}</dd>
+   <dt>가까운 사람</dt><dd>${fr.b?fr.b.name:'없음'}</dd><dt>불편한 사람</dt><dd>${fr.w?fr.w.name:'없음'}</dd>
+   <dt>평판</dt><dd>${a>15?'믿음직하다':a>3?'괜찮다':a>-8?'그저 그렇다':'못 미덥다'}</dd></dl><ul class="reclist">${recs}</ul>`;
+}
+let lastLog=-1;
+function renderJournal(force){
+  const S=C.S;if(!force&&S.log.length===lastLog)return;lastLog=S.log.length;
+  const out=[];let cur=null;
+  for(const e of S.log.slice(-220).reverse()){if(e.k==='day')continue;if(jMode==='big'&&e.k==='life')continue;if(e.d!==cur){cur=e.d;out.push(`<div class="day">${e.d}일째</div>`)}out.push(`<div class="e ${e.k}"><span class="t">${C.PH[e.ph]}</span><span class="m">${e.t}</span></div>`)}
+  $('journal').innerHTML=out.join('');
+}
+$('jAll').onclick=()=>{jMode='all';$('jAll').setAttribute('aria-pressed','true');$('jBig').setAttribute('aria-pressed','false');renderJournal(true)};
+$('jBig').onclick=()=>{jMode='big';$('jBig').setAttribute('aria-pressed','true');$('jAll').setAttribute('aria-pressed','false');renderJournal(true)};
+function renderSide(){renderTop();renderRoster();renderDetail();renderJournal()}
+
+function syncPlay(){$('play').textContent=running?'일시정지':'재생';$('play').setAttribute('aria-pressed',String(!running))}
+let cur=null;
+function step(){
+  const ev=C.tick();renderSide();if(C.S.ended)clearSave();else if(!ev)saveGame();
+  if(C.S.ended){setTimeout(openEnding,900);modal=true;return}
+  if(ev)setTimeout(()=>openEvent(ev),speed===10?250:700),modal=true;
+}
+function openEvent(ev){
+  const S=C.S;cur=ev;modal=true;
+  $('evEb').textContent=`${ev.day}일째 ${C.PH[ev.ph]} · ${ev.k}`;$('evTitle').textContent=ev.title;$('evText').textContent=ev.text;
+  const fc=C.forecast();$('evStatus').textContent=`생존 ${S.people.filter(p=>p.alive&&!p.away).length}명 · 식량 ${f1(S.food)} · 물 ${f1(S.water)} · 장작 ${f1(S.wood)}${fc?' · '+fc:''}`;
+  $('evOpts').innerHTML=ev.opts.map((o,i)=>`<button class="opt" data-i="${i}"><b>${o.l}</b><span>${o.h||''}</span></button>`).join('');
+  $('ovEvent').hidden=false;$('evOpts').querySelector('.opt')?.focus();
+}
+$('evOpts').addEventListener('click',e=>{const b=e.target.closest('.opt');if(b)choose(+b.dataset.i,false)});
+$('autoPick').onclick=()=>choose(Math.floor(Math.random()*cur.opts.length),true);
+let sceneTimer=null,lines=[],li=0;
+function choose(i,auto){
+  $('ovEvent').hidden=true;const o=cur.opts[i];lines=C.resolve(cur,i,auto);if(C.S.ended)clearSave();else saveGame();
+  $('sceneEb').textContent=`${cur.title}${auto?' · 섬 사람들이 정함':''}`;$('sceneTitle').textContent=o.l;
+  li=0;$('scene').innerHTML='';$('sceneDone').hidden=true;$('sceneSkip').hidden=false;$('ovScene').hidden=false;renderSide();nextLine();
+}
+function addLine(t){const p=document.createElement('p');const hl=t.startsWith('※');p.textContent=hl?t.slice(1).trim():t;if(hl)p.className='hl';$('scene').appendChild(p)}
+function nextLine(){clearTimeout(sceneTimer);if(li>=lines.length){$('sceneDone').hidden=false;$('sceneSkip').hidden=true;$('sceneDone').textContent=C.S.ended?'끝을 본다':'섬으로 돌아간다';$('sceneDone').focus();return}addLine(lines[li++]);sceneTimer=setTimeout(nextLine,speed===10?260:speed===3?550:900)}
+$('sceneSkip').onclick=()=>{clearTimeout(sceneTimer);while(li<lines.length)addLine(lines[li++]);nextLine()};
+$('sceneDone').onclick=()=>{$('ovScene').hidden=true;acc=0;renderSide();if(C.S.ended){openEnding();return}modal=false};
+let slides=[],si=0;
+function openEnding(){slides=C.endingSlides();si=0;$('ovEnd').hidden=false;modal=true;renderSlide()}
+function renderSlide(){
+  const s=slides[si];$('endEb').textContent=s.eb;$('endTitle').textContent=s.title;const b=$('endBody');b.innerHTML='';
+  if(s.p){const d=document.createElement('div');d.className='portrait';d.innerHTML=`<span class="fate ${s.p.alive?'alive':'dead'}">${s.p.alive?(s.p.away?'구조를 부른 사람':'생존'):'사망'}</span><span class="muted">${s.p.job}</span>`;b.appendChild(d)}
+  for(const t of s.body){const p=document.createElement('p');p.style.whiteSpace='pre-line';p.textContent=t;b.appendChild(p)}
+  $('endDots').innerHTML=slides.map((_,i)=>`<i class="${i===si?'on':''}"></i>`).join('');
+  $('endPrev').disabled=si===0;$('endNext').textContent=si===slides.length-1?'닫기':'다음';
+}
+$('endPrev').onclick=()=>{if(si>0){si--;renderSlide()}};
+$('endNext').onclick=()=>{if(si<slides.length-1){si++;renderSlide()}else $('ovEnd').hidden=true};
+$('endNew').onclick=()=>{$('ovEnd').hidden=true;start()};
+$('play').onclick=()=>{running=!running;syncPlay()};
+for(const v of[1,3,10])$('sp'+v).onclick=()=>{speed=v;for(const u of[1,3,10])$('sp'+u).setAttribute('aria-pressed',String(u===v))};
+$('reset').onclick=()=>{['ovEvent','ovScene','ovEnd'].forEach(id=>$(id).hidden=true);clearTimeout(sceneTimer);start()};
+function resumeToast(msg){try{const d=document.createElement('div');d.setAttribute('role','status');d.textContent=msg;
+ d.style.cssText='position:fixed;left:50%;top:calc(14px + env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:2147483001;max-width:min(92vw,520px);background:rgba(22,25,40,.9);color:#eef0f8;font:600 13px/1.45 "IBM Plex Sans KR","Apple SD Gothic Neo",system-ui,sans-serif;padding:9px 14px;border-radius:12px;box-shadow:0 4px 16px rgba(0,0,0,.3);text-align:center;transition:opacity .4s';
+ document.body.appendChild(d);setTimeout(()=>{d.style.opacity='0';setTimeout(()=>d.remove(),450)},5200)}catch(e){}}
+const SAVE_KEY='castaway-island-v1';
+function saveGame(){try{if(C.S&&!C.S.ended)localStorage.setItem(SAVE_KEY,JSON.stringify(C.S))}catch(e){}}
+function clearSave(){try{localStorage.removeItem(SAVE_KEY)}catch(e){}}
+function resumeGame(){let s=null;try{s=JSON.parse(localStorage.getItem(SAVE_KEY))}catch(e){}
+ if(!s||s.ended||!Array.isArray(s.people)||!s.people.length||typeof s.seed!=='number')return false;
+ try{C.load(s);genTerrain(s.seed);modal=false;acc=0;lastLog=-1;sel=0;bubbles.clear();running=true;syncPlay();renderSide()}catch(e){clearSave();return false}
+ resumeToast(`${s.day}일째 ${C.PH[s.phase]||''}부터 이어서 합니다 · 처음부터 하려면 ‘새 섬’`);return true}
+function start(){const seed=1000+Math.floor(Math.random()*9000);C.newGame(seed);saveGame();genTerrain(seed);modal=false;acc=0;lastLog=-1;sel=0;bubbles.clear();running=true;syncPlay();renderSide()}
+let last=performance.now();
+function loop(now){const dt=Math.min(100,now-last);last=now;if(running&&!modal&&!C.S.ended){acc+=dt;if(acc>=PHMS[speed]){acc=0;step()}}draw(now);requestAnimationFrame(loop)}
+window.addEventListener('resize',resize);
+resize();if(!resumeGame())start();requestAnimationFrame(loop);
+})();
+</script>
+
+</body></html>

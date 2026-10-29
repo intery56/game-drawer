@@ -1,0 +1,1118 @@
+<!doctype html><html><head><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script><script src="../assets/config.js"></script><script src="../assets/member.js" data-game="saem-heart"></script><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>샘의 심장</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Nanum+Gothic+Coding:wght@400;700&family=Song+Myung&display=swap">
+<style>
+/* Layout: one narrow column like an old CRPG dialog — status strip, pixel scene window, story text, choice list. Deliberately single dark theme (night-lit, low-contrast for long reading). */
+:root{
+  --ink:#1b1e26; --panel:#232833; --well:#15181e; --line:#3a4152;
+  --text:#e2d7c0; --mute:#958d7a; --gold:#d2ad66; --blood:#c46a5e; --moss:#8fab78; --teal:#82b4b3;
+  --f-story:"Gowun Batang","Noto Serif KR","AppleMyungjo",serif;
+  --f-ui:"Nanum Gothic Coding",ui-monospace,"D2Coding",monospace;
+  --f-title:"Song Myung","Gowun Batang",serif;
+  color-scheme:dark;
+}
+html,body{background:var(--ink);color:var(--text)}
+body{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:14px 40px;font-family:var(--f-story)}
+#app{max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:12px}
+#stat{display:flex;flex-direction:column;gap:6px;font-family:var(--f-ui);font-size:12px;color:var(--mute);background:var(--panel);border:1px solid var(--line);padding:8px 10px}
+#stat .row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+#stat .lbl{letter-spacing:.06em}
+.bar{flex:1;min-width:90px;height:10px;background:var(--well);border:1px solid var(--line)}
+.bar i{display:block;height:100%;background:var(--blood);transition:width .25s}
+.num{color:var(--text);font-variant-numeric:tabular-nums}
+.pips{display:inline-flex;gap:3px}
+.pip{width:9px;height:9px;background:var(--well);border:1px solid var(--line)}
+.pip.on{background:var(--teal);border-color:var(--teal)}
+.chip{color:var(--text);font-variant-numeric:tabular-nums}
+.chip b{color:var(--mute);font-weight:400;margin-right:4px}
+.days{margin-left:auto;color:var(--gold)}
+.days.warn{color:var(--blood)}
+.gear{color:var(--mute)}
+.frame{position:relative;border:2px solid var(--line);outline:3px solid var(--well);background:var(--well);line-height:0}
+#scene{width:100%;aspect-ratio:16/9;image-rendering:pixelated;image-rendering:crisp-edges;display:block;max-width:100%}
+.frame.hit{animation:shake .28s}
+@keyframes shake{0%,100%{transform:none}25%{transform:translate(-3px,1px)}50%{transform:translate(3px,-1px)}75%{transform:translate(-2px,0)}}
+#labels{position:absolute;inset:0;pointer-events:none;line-height:1.2}
+.lab{position:absolute;transform:translate(-50%,0);font:700 11px var(--f-ui);color:var(--text);white-space:nowrap;text-shadow:0 1px 0 var(--well),1px 0 0 var(--well),-1px 0 0 var(--well),0 -1px 0 var(--well)}
+.lab.here{color:var(--gold)}
+#ebar{font-family:var(--f-ui);font-size:12px;display:flex;flex-direction:column;gap:4px}
+#ebar .row{display:flex;gap:10px;align-items:center}
+#ebar .bar i{background:var(--moss)}
+#ebar .warn{color:var(--gold)}
+#story{display:flex;flex-direction:column;gap:6px}
+#place{font:12px var(--f-ui);letter-spacing:.12em;color:var(--mute)}
+#ttl{font:400 26px/1.25 var(--f-title);margin:0;color:var(--text);text-wrap:balance}
+#txt{font-size:17px;line-height:1.85;display:flex;flex-direction:column;gap:10px;max-width:62ch}
+#txt p{margin:0}
+#txt p.say{padding-left:12px;border-left:2px solid var(--line)}
+#txt p.say b{display:block;font:700 12px var(--f-ui);color:var(--gold);letter-spacing:.06em;margin-bottom:2px}
+#txt p.doc{font-size:15px;background:var(--panel);border:1px dashed var(--line);padding:10px 12px;color:var(--mute)}
+.note{font:13px var(--f-ui);color:var(--teal)}
+.fade{animation:fade .35s ease-out}
+@keyframes fade{from{opacity:.25;transform:translateY(3px)}to{opacity:1;transform:none}}
+#log{font:13px/1.65 var(--f-ui);background:var(--well);border:1px solid var(--line);padding:10px 12px;display:flex;flex-direction:column;gap:2px;color:var(--mute)}
+#log .new{color:var(--text)}
+#ch{display:flex;flex-direction:column;gap:8px}
+#ch.grid{display:grid;grid-template-columns:1fr 1fr}
+.choice{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;background:var(--panel);border:1px solid var(--line);color:var(--text);padding:12px 14px 12px 30px;font:16px/1.5 var(--f-story);cursor:pointer;position:relative;min-width:0}
+.choice::before{content:"▸";position:absolute;left:12px;top:12px;color:var(--gold)}
+.choice:hover:not(:disabled){border-color:var(--gold);background:var(--well)}
+.choice:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.choice:disabled{opacity:.5;cursor:not-allowed}
+.choice:disabled::before{color:var(--mute)}
+.choice .sub{font:12px var(--f-ui);color:var(--mute)}
+.choice .why{color:var(--blood)}
+.choice kbd{font:11px var(--f-ui);color:var(--mute);position:absolute;right:10px;top:13px}
+#ch.grid .choice{padding-left:14px}
+#ch.grid .choice::before{content:none}
+.namebox{display:flex;flex-direction:column;gap:6px;font:13px var(--f-ui);color:var(--mute)}
+.namebox input{font:18px var(--f-story);background:var(--well);color:var(--text);border:1px solid var(--line);padding:10px 12px;max-width:240px}
+.namebox input:focus-visible{outline:2px solid var(--gold)}
+.summary{font:13px var(--f-ui);color:var(--mute)}
+@media (prefers-reduced-motion:reduce){.fade,.frame.hit{animation:none}.bar i{transition:none}}
+</style>
+
+<div id="app">
+  <header id="stat" hidden>
+    <div class="row"><span class="lbl">체력</span><div class="bar"><i id="hpb"></i></div><span id="hpt" class="num"></span></div>
+    <div class="row"><span class="lbl">기력</span><span class="pips" id="sp"></span>
+      <span class="chip"><b>금화</b><span id="gold"></span></span>
+      <span class="chip"><b>물약</b><span id="pot"></span></span>
+      <span class="chip"><b>Lv</b><span id="lv"></span></span>
+      <span class="days" id="days"></span></div>
+    <div class="gear" id="gear"></div>
+  </header>
+  <div class="frame" id="frame"><canvas id="scene" width="96" height="54" aria-label="장면 그림"></canvas><div id="labels"></div></div>
+  <div id="ebar" hidden></div>
+  <section id="story"><div id="place"></div><h1 id="ttl"></h1><div id="txt"></div></section>
+  <div id="log" hidden></div>
+  <nav id="ch"></nav>
+</div>
+
+<script>
+"use strict";
+const $=s=>document.querySelector(s);
+const KEY='saem-heart-v1';
+let S=null,CUR='title',C=null,NOTE='';
+const rnd=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
+const chance=p=>Math.random()<p;
+function j(w,a,b){const c=w.charCodeAt(w.length-1);if(c<0xac00||c>0xd7a3)return w+a;return w+(((c-0xac00)%28)?a:b);}
+
+/* ---------- 장비 / 적 ---------- */
+const W={old:{n:'낡은 검',a:0},long:{n:'장검',a:3},bastard:{n:'바스타드 소드',a:6}};
+const A={none:{n:'누빈 조끼',d:1},chain:{n:'사슬 갑옷',d:3},plate:{n:'판금 흉갑',d:5}};
+const EN={
+  wolf:{n:'들개 무리',hp:16,a:[3,6],def:0,xp:8,gold:0,spr:'wolf'},
+  bandit:{n:'늑대단 약탈자',hp:22,a:[4,7],def:1,xp:12,gold:10,spr:'bandit'},
+  sera:{n:'두목 세라',hp:46,a:[6,10],def:2,xp:40,gold:60,spr:'sera',boss:1,scale:3},
+  champion:{n:'세라의 투사',hp:34,a:[5,8],def:1,xp:25,gold:0,spr:'champion'},
+  guard:{n:'조합 경비대장',hp:40,a:[6,9],def:2,xp:30,gold:80,spr:'guard',boss:1},
+  spider:{n:'갱도 거미',hp:20,a:[4,8],def:0,xp:12,gold:0,spr:'spider'},
+  cspider:{n:'수정 거미',hp:28,a:[5,9],def:2,xp:18,gold:0,spr:'cspider'},
+  golem:{n:'수정 골렘',hp:60,a:[8,12],def:4,xp:60,gold:0,spr:'golem',boss:1,scale:3,tele:3,teleMsg:'골렘의 몸에서 수정이 빛나며 두 팔이 천천히 들린다. 방패를 들어라!'},
+  minerguard:{n:'흙사람 경비',hp:30,a:[5,8],def:2,xp:20,gold:5,spr:'miner'},
+  ash:{n:'잿빛 병사',hp:34,a:[7,10],def:2,xp:20,gold:12,spr:'ash'},
+  priest:{n:'회색 사제',hp:40,a:[8,12],def:1,xp:30,gold:40,spr:'priest'},
+  rats:{n:'묘지 쥐떼',hp:24,a:[3,7],def:0,xp:12,gold:0,spr:'rats'},
+  king:{n:'이름 없는 왕',hp:110,a:[10,15],def:4,xp:0,gold:0,spr:'king',boss:1,scale:3,drain:1,tele:4,teleMsg:'왕이 재의 화로에서 불길을 끌어 모은다. 방패를 들어라!'},
+  ironmask:{n:'쇠가면',hp:85,a:[10,14],def:5,xp:60,gold:50,spr:'ironmask',boss:1,scale:3,tele:3,teleMsg:'쇠가면이 도끼를 머리 위로 높이 쳐든다. 방패를 들어라!'}
+};
+
+/* ---------- 지도 ---------- */
+const LOCS1={
+  home:{n:'돌샘마을',x:14,y:40,hub:'home',art:'village'},
+  reed:{n:'갈대나루',x:34,y:31,hub:'reed',art:'river'},
+  forest:{n:'붉은숲',x:46,y:45,hub:'forest',art:'forest'},
+  mine:{n:'쇠울 폐광',x:58,y:14,hub:'mine',art:'mine'},
+  mon:{n:'회색 수도원',x:80,y:38,hub:'mon',art:'monastery'},
+  tower:{n:'검은탑',x:85,y:10,hub:'tower',art:'tower'}
+};
+let LOCS=LOCS1;
+const ROADS1=[['home','reed'],['reed','forest'],['reed','mine'],['forest','mine'],['home','mine'],['mine','tower'],['reed','mon'],['mon','tower'],['home','mon'],['forest','mon']];let ROADS=ROADS1;
+function dist(a,b){const A_=LOCS[a],B=LOCS[b];return Math.max(2,Math.round(Math.hypot(A_.x-B.x,A_.y-B.y)/(S&&S.dlc?5:3.5)));}
+function visible(k){if(S.dlc)return visibleD(k);const f=S.f;
+  if(k==='home'||k==='reed')return true;
+  if(k==='forest')return f.rumor||f.quest||f.reed;
+  if(k==='mine')return f.road;
+  if(k==='mon'||k==='tower')return S.act===2;
+  return false;}
+
+/* ---------- 상태 ---------- */
+function newGame(name){S={name,hp:44,maxHp:44,sp:2,lvl:1,xp:0,gold:30,pot:2,wpn:'old',arm:'none',day:1,water:75,inv:0,act:1,karma:0,loc:'home',last:'home',trait:null,f:{}};}
+const TRAITS={merc:'용병 출신',shield:'방패병',scout:'길잡이'};
+const need=()=>S.lvl*30;
+const atkB=()=>W[S.wpn].a+(S.lvl-1)+(S.trait==='merc'?2:0);
+const rollAtk=()=>rnd(5,9)+atkB();
+const defP=()=>A[S.arm].d+(S.trait==='shield'?1:0);
+const tdays=(a,b)=>{const d=dist(a,b);return S.trait==='scout'?Math.max(2,Math.round(d*.8)):d;};
+const remain=()=>S.dlc?S.plague-S.day:S.act===1?S.water-S.day:S.inv-S.day;
+function tick(n){S.day+=n;if(S.dlc)return S.plague-S.day<=0?'E_d1plague':null;if(S.act===1&&S.water-S.day<=0)return'E_drought';if(S.act===2&&S.inv-S.day<=0)return'E_invasion';return null;}
+function gainXp(n){const m=[];S.xp+=n;while(S.xp>=need()){S.xp-=need();S.lvl++;S.maxHp+=8;S.hp=Math.min(S.maxHp,S.hp+8);m.push(`레벨 ${S.lvl}! 최대 체력 +8, 공격력 +1.`);}return m;}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
+function hasSave(){try{return!!localStorage.getItem(KEY);}catch(e){return false;}}
+function loadGame(){try{const d=localStorage.getItem(KEY);if(d){S=JSON.parse(d);go(S.last||'home');return;}}catch(e){}title();}
+
+/* ---------- 도트 그림 ---------- */
+const cv=$('#scene'),g=cv.getContext('2d');
+function P(x,y,w,h,c){g.fillStyle=c;g.fillRect(x|0,y|0,w|0,h|0);}
+function rng(seed){return function(){seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+function bands(a){let y=0;for(const[c,h]of a){P(0,y,96,h,c);y+=h;}if(y<54)P(0,y,96,54-y,a[a.length-1][0]);}
+function stars(r,n,maxY,c){for(let i=0;i<n;i++)P(Math.floor(r()*96),Math.floor(r()*maxY),1,1,c||(r()<.3?'#d8cfb4':'#8a8aa0'));}
+function ridge(base,amp,fq,c,seed){const r=rng(seed),ph=r()*6;for(let x=0;x<96;x++){const h=Math.round(base+Math.sin(x*fq+ph)*amp+Math.sin(x*fq*2.3+ph*2)*amp*.4);P(x,h,1,54-h,c);}}
+function tri(cx,top,h,c,slope){slope=slope||1.4;for(let i=0;i<h;i++){const w=Math.floor(i/slope);P(cx-w,top+i,w*2+1,1,c);}}
+function circ(cx,cy,r,c){for(let y=-r;y<=r;y++)for(let x=-r;x<=r;x++)if(x*x+y*y<=r*r+r*.6)P(cx+x,cy+y,1,1,c);}
+function house(x,y,w,h,wall,roof,lit){const rh=Math.ceil(w/2);for(let i=0;i<rh;i++){const inset=rh-1-i;P(x+inset-1,y-rh+i,w-2*inset+2,1,roof);}P(x,y,w,h,wall);P(x+2,y+2,2,2,lit?'#d9b26a':'#3a3036');if(w>9)P(x+w-6,y+h-4,3,4,'#33261f');}
+function well(x,y){P(x,y,1,8,'#6e5640');P(x+8,y,1,8,'#6e5640');P(x-1,y-1,11,2,'#5b3a35');P(x+4,y+1,1,4,'#8a6e4b');P(x+3,y+5,3,2,'#6e5640');P(x,y+7,9,4,'#6f7078');P(x-1,y+7,11,1,'#8c8d95');P(x+1,y+8,7,1,'#24323c');}
+function fig(x,y,c){P(x,y,2,2,c);P(x-1,y+2,4,4,c);P(x,y+6,1,3,c);P(x+1,y+6,1,3,c);}
+
+const ART={
+  title(){bands([['#14171f',12],['#191d28',10],['#1f2431',8],['#262c3b',6],['#2c3344',4]]);stars(rng(3),34,32);circ(74,11,4,'#d6cdb2');circ(76,10,3,'#262c3b');ridge(36,3,.08,'#1f2726',5);ridge(42,2,.12,'#181f1d',7);well(44,34);P(43,40,11,1,'#3a3d44');},
+  village(){ART._village(false)},
+  village_ash(){ART._village(true)},
+  _village(ash){bands(ash?[['#37373e',12],['#403f46',10],['#4b474e',8],['#57505a',6]]:[['#252a3b',10],['#2e3447',8],['#3b3e54',7],['#574f64',5],['#76606a',4]]);
+    if(!ash)stars(rng(1),14,20);
+    ridge(30,2,.07,ash?'#393b3b':'#2b3838',11);
+    P(0,39,96,15,ash?'#3a3e34':'#33422f');
+    const r=rng(9);for(let i=0;i<40;i++)P(r()*96,40+r()*14,1,1,ash?'#44483d':'#3e5037');
+    for(let y=39;y<54;y++){const w=6+(y-39);P(48-w/2,y,w,1,'#5a4f3f');}
+    house(5,31,14,9,'#7d6a52','#553833',!ash);house(23,34,10,7,'#86715a','#4f3530',false);house(68,31,14,9,'#7d6a52','#553833',!ash);house(86,35,9,6,'#86715a','#4f3530',!ash);
+    well(44,30);},
+  dry(){bands([['#5a4c3c',12],['#6c5a44',10],['#80684c',8],['#937650',6]]);circ(70,10,5,'#c9a46a');ridge(30,2,.07,'#5a4a38',11);P(0,39,96,15,'#6e5a42');const r=rng(5);for(let i=0;i<18;i++){const x=r()*96,y=41+r()*12;P(x,y,3,1,'#4a3c2c');P(x+2,y+1,2,1,'#4a3c2c');}house(5,31,14,9,'#6d5c48','#4a3530',false);house(68,31,14,9,'#6d5c48','#4a3530',false);well(44,30);P(45,38,7,1,'#4a3c2c');},
+  river(){bands([['#293043',9],['#333b54',8],['#474861',6],['#6a5c6b',5],['#8b726f',3]]);stars(rng(2),8,14);
+    P(0,31,96,3,'#2c3933');house(62,26,9,5,'#6e5c48','#4b3530',true);house(76,27,8,4,'#7a6650','#4b3530',true);P(63,31,1,3,'#4a3a2c');P(70,31,1,3,'#4a3a2c');P(77,31,1,3,'#4a3a2c');
+},
+  forest(){bands([['#1b2029',12],['#212833',10],['#283140',8]]);stars(rng(6),16,24);
+    for(let x=-2;x<100;x+=7)tri(x,12+(x*3)%7,22,'#1e2b26',1.6);
+    for(let x=2;x<100;x+=9)tri(x,20+(x*5)%6,18,'#26392f',1.5);
+    P(0,42,96,12,'#29321f');
+    if(!S||!S.f||S.f.reed!=='guild'){tri(30,33,10,'#7a3434',1.3);P(29,39,3,4,'#2a1a1a');tri(64,35,8,'#6a3030',1.3);P(63,39,3,3,'#2a1a1a');P(41,24,1,18,'#4a3a2c');P(42,24,6,4,'#8a3b3b');}
+    else{P(26,40,10,2,'#2a2420');P(60,41,8,1,'#2a2420');}
+    P(45,47,7,1,'#5a4030');P(46,46,5,1,'#8a5434');
+    tri(4,14,40,'#151d19',1.8);tri(92,10,44,'#151d19',1.8);},
+  mine(){bands([['#252935',14],['#2d3140',10],['#353949',6]]);stars(rng(7),12,18);
+    const r=rng(11);for(let x=0;x<96;x++){const h=Math.round(8+Math.abs(x-48)*.55+Math.sin(x*.4)*1.5);P(x,h,1,54-h,'#45414e');}
+    for(let i=0;i<60;i++)P(20+r()*56,14+r()*30,1,1,'#55516a');
+    P(46,8,5,2,'#8f8c98');P(45,10,7,1,'#77747f');
+    for(let y=30;y<47;y++){const w=y<34?10+(y-30)*2:18;P(48-w/2,y,w,1,'#111217');}
+    P(38,32,2,15,'#6e5640');P(57,32,2,15,'#6e5640');P(37,30,23,2,'#7a6048');
+    P(34,34,2,2,'#e0b866');P(61,34,2,2,'#e0b866');P(33,33,4,4,'#4a4030');P(34,34,2,2,'#e0b866');P(60,33,4,4,'#4a4030');P(61,34,2,2,'#e0b866');
+    P(0,47,96,7,'#322f39');P(44,46,1,8,'#7c7d85');P(52,46,1,8,'#7c7d85');for(let y=47;y<54;y+=2)P(43,y,11,1,'#4f3d2e');
+    P(66,43,9,4,'#5c4a3a');P(67,47,2,2,'#25252b');P(72,47,2,2,'#25252b');P(67,42,7,1,'#6a6878');},
+  cave(){ART._cave(false)},
+  pump(){ART._cave(true)},
+  _cave(pump){P(0,0,96,54,'#15161d');const r=rng(pump?14:13);
+    for(let x=0;x<96;x++){P(x,0,1,3+Math.floor(r()*8),'#262733');P(x,44-Math.floor(r()*3),1,12,'#1e1f28');}
+    for(let i=0;i<5;i++){const x=6+i*20+Math.floor(r()*6);tri(x,40,8,'#23242f',2.5);}
+    const cr=(x,y,h)=>{P(x-1,y-h-1,4,h+2,'#1e2c32');P(x,y-h,2,h,'#6fa3a6');P(x,y-h,1,h,'#a3d0c6');};
+    cr(8,44,7);cr(12,44,4);cr(84,43,8);cr(89,44,5);cr(24,8,4);cr(70,7,5);
+    if(pump){P(20,27,18,3,'#5c4c34');P(58,27,18,3,'#5c4c34');P(42,23,12,15,'#22383a');P(37,20,22,24,'#6b5a3e');P(38,21,20,2,'#8a7048');P(36,42,24,3,'#4c3e2a');P(44,24,8,12,'#22383a');P(45,25,6,10,'#82c4c0');P(46,26,2,7,'#cfeee2');}},
+  crypt(){P(0,0,96,54,'#131217');for(let y=0;y<44;y+=4)for(let x=(y%8?0:3);x<96;x+=7)P(x,y,6,3,'#1b1a20');
+    P(8,6,7,40,'#2a2830');P(81,6,7,40,'#2a2830');for(let i=0;i<10;i++)P(15+i*3,6+Math.round(Math.sqrt(i)*2),3,2,'#2a2830');
+    [22,34,58,70].forEach((x,i)=>{for(let k=0;k<3;k++){P(x+k*3,20+(i%2)*6,2,2,'#a8a090');P(x+k*3,21+(i%2)*6,1,1,'#2a2830');}});
+    P(30,38,1,4,'#cfc6a8');P(66,38,1,4,'#cfc6a8');
+    P(0,44,96,10,'#1d1b22');for(let x=40;x<56;x++)P(x,44+(x%3),1,1,'#2a2830');},
+  monastery(){bands([['#33313a',10],['#3c3a42',10],['#46434b',8],['#524e57',6]]);
+    P(0,44,96,10,'#37363b');
+    P(26,24,44,20,'#55525b');P(26,24,44,2,'#605d66');
+    P(24,16,9,28,'#4c4952');tri(28,8,8,'#4c4952',1.5);P(63,16,9,28,'#4c4952');tri(67,8,8,'#4c4952',1.5);
+    for(let i=0;i<24;i++){const w=Math.floor(i/3);P(48-w,1+i,w*2+1,1,'#4d4a53');}
+    [30,36,58,64].forEach(x=>{P(x,29,2,6,'#a85c4a');P(x,28,1,1,'#a85c4a');});P(27,22,2,5,'#a85c4a');P(66,22,2,5,'#a85c4a');
+    circ(48,30,3,'#b5673f');P(48,30,1,1,'#e0a060');P(44,37,8,7,'#19171d');P(45,36,6,1,'#19171d');
+},
+  hall(){P(0,0,96,54,'#1b1920');for(let y=40;y<54;y+=2)for(let x=0;x<96;x+=4)P(x+((y/2)%2)*2,y,2,2,'#2c2832');P(0,40,96,1,'#36333c');
+    [6,20,70,84].forEach(x=>{P(x,4,6,36,'#34313a');P(x-1,4,8,2,'#3e3a44');P(x-1,38,8,2,'#3e3a44');});
+    P(36,32,24,3,'#4a4048');P(40,35,16,2,'#3a3238');P(46,37,4,3,'#3a3238');P(38,24,20,8,'#3a1e1c');},
+  tower(){bands([['#1e1518',10],['#291a1e',10],['#382026',8],['#532829',6],['#6b392b',4]]);
+    ridge(34,2,.09,'#1b1315',17);
+    P(40,6,16,40,'#141218');for(let x=38;x<58;x+=4)P(x,3,3,4,'#141218');P(38,6,20,2,'#141218');
+    [[44,14],[50,20],[45,28],[51,34]].forEach(([x,y])=>P(x,y,1,3,'#d0703f'));
+    P(36,12,1,14,'#3a3a40');P(37,12,4,6,'#6a2a2a');P(59,12,1,14,'#3a3a40');P(60,12,4,6,'#6a2a2a');
+    P(0,46,96,8,'#1f191b');P(30,44,36,2,'#5a2a22');
+    [[8,37],[76,37]].forEach(([x,y])=>{P(x,y,12,9,'#1a1416');for(let k=0;k<12;k+=2)P(x+k,y,1,9,'#4a4048');P(x,y,12,1,'#4a4048');fig(x+4,y+2,'#2e2629');});},
+  forge(){P(0,0,96,54,'#1d1315');for(let y=0;y<44;y+=3)for(let x=(y%6?0:3);x<96;x+=6)P(x,y,5,2,'#261a1c');
+    P(34,0,1,18,'#4a4048');P(61,0,1,18,'#4a4048');
+    P(28,16,40,3,'#c56a3a');P(29,15,38,1,'#e09050');P(28,19,40,3,'#3e3640');for(let i=0;i<8;i++){const w=36-i*3;P(48-w/2,22+i,w,1,'#3e3640');}P(44,30,8,8,'#352e36');P(36,38,24,3,'#3e3640');
+    P(0,44,96,10,'#150e10');P(70,36,12,8,'#3a2a22');P(71,35,10,1,'#5a4232');P(73,33,6,2,'#a89f8a');},
+  road(){bands([['#38435a',12],['#445069',9],['#555f79',7],['#686f86',4]]);ridge(30,3,.06,'#3a483f',21);ridge(37,2,.1,'#44563e',22);P(0,43,96,11,'#4a593c');
+    for(let y=43;y<54;y++){const w=4+(y-43)*1.6;P(60-(y-43)*2.2,y,w,1,'#6a5c44');}
+    P(72,34,1,10,'#6e5640');P(68,34,9,3,'#8a6e4b');
+    const r=rng(23);for(let i=0;i<30;i++)P(r()*96,44+r()*10,1,1,'#56683f');},
+  end(){bands([['#2c2840',8],['#433756',8],['#664860',6],['#905d5d',5],['#ba7f62',4],['#d29e6c',3]]);circ(48,35,6,'#e0bd86');ridge(34,2,.06,'#29242f',31);P(0,42,96,12,'#231f28');
+    for(let y=42;y<54;y++)P(46-(y-42)*1.4,y,3+(y-42)*.6,1,'#3a3240');fig(46,32,'#16131a');P(49,31,1,8,'#16131a');},
+  map(){P(0,0,96,54,'#28312c');const r=rng(30);for(let i=0;i<120;i++)P(r()*96,r()*54,1,1,'#2f3a33');
+    for(let x=70;x<96;x++)for(let y=20;y<54;y++)if((x+y)%2===0&&r()<.5)P(x,y,1,1,'#36343a');
+    for(let i=0;i<9;i++){const x=40+i*7,y=2+(i%3);tri(x,y,9,'#4a4652',1.2);P(x,y,1,2,'#8a8794');}
+    const river=[[60,6],[58,14],[50,22],[40,28],[34,31],[26,38],[16,46],[4,54]];
+    for(let k=0;k<river.length-1;k++){const[a,b]=river[k],[c,d]=river[k+1];const n=Math.max(Math.abs(c-a),Math.abs(d-b));for(let t=0;t<=n;t++)P(a+(c-a)*t/n,b+(d-b)*t/n,2,2,'#2f4a5e');}
+    for(let i=0;i<26;i++)circ(40+r()*14,40+r()*10,1,'#22362a');
+    if(!S)return;
+    ROADS.forEach(([a,b])=>{if(!visible(a)||!visible(b))return;const A_=LOCS[a],B=LOCS[b];const n=Math.max(Math.abs(B.x-A_.x),Math.abs(B.y-A_.y));for(let t=0;t<=n;t+=2)P(A_.x+(B.x-A_.x)*t/n,A_.y+(B.y-A_.y)*t/n,1,1,'#7a6e54');});
+    Object.keys(LOCS).forEach(k=>{if(!visible(k))return;const L=LOCS[k];if(k===S.loc){P(L.x-3,L.y-3,7,7,'#e2d7c0');P(L.x-2,L.y-2,5,5,'#28312c');}P(L.x-1,L.y-1,3,3,(k==='mon'||k==='tower')?'#c46a5e':'#d2ad66');});}
+};
+
+/* ---------- 스프라이트 ---------- */
+const SPR={
+  hum:["....hhhh....","...hhhhhh..w","...hssssh..w","...hesseh..w","....ssss...w","..cccccccc.w",".cccccccccsw",".sccccccccs.",".s.cccccc...","...cccccc...","...ll..ll...","...ll..ll...","..bbb..bbb.."],
+  wolf:[".........gg...","........gggg..","........gegg..","gg......ggggn.",".gggggggggg...","..gggggggggg..","..gggggggggg..","..g.g....g.g..","..g.g....g.g.."],
+  spider:["l...l....l...l",".l..l....l..l.","..llbbbbbbll..",".lbbbbbbbbbbl.","l.bbebbbbebb.l","..lbbbbbbbbl..",".l..l....l..l.","l...l....l...l"],
+  golem:[".....cc.......","....cccc.c....","...rrrrrrcc...","..rrerrerrr...","..rrrrrrrrr...","rrrrrrrrrrrrr.","rrcrrrrrrrcrr.","rr.rrrrrrr.rr.","rr.rrrcrrr.rr.","cc.rrrrrrr.cc.","...rrr.rrr....","...rr...rr....","..rrr...rrr..."],
+  rats:["..............",".rr.....rr....","rrrrt..rrrrt..",".r.r....r.r...","....rr........","...rrrrt......","....r.r......."]
+};
+const DEF={s:'#c9a284',e:'#1d1a18',l:'#3b3228',b:'#241e1a',w:'#a8a8b0'};
+const CH={
+  elder:{s:'hum',p:{h:'#c9c3b2',c:'#4f5674',l:'#3b3a48',w:'#8a6e4b'}},
+  smith:{s:'hum',p:{h:'#3b2e28',s:'#b98a6a',c:'#6e5640',w:'#8c8d95'}},
+  morgan:{s:'hum',p:{h:'#5a4a30',s:'#d0a888',c:'#8a6e2e',l:'#4a3a24',w:'#d2ad66'}},
+  vera:{s:'hum',p:{h:'#7a5a44',s:'#d0a888',c:'#5a6a5a',w:'#6e5640'}},
+  fox:{s:'hum',p:{h:'#a8643a',c:'#4b4036'}},
+  bandit:{s:'hum',p:{h:'#7a3434',c:'#5a4a3a'}},
+  sera:{s:'hum',p:{h:'#b24f42',c:'#3e3a3a',w:'#c8c8d0'}},
+  champion:{s:'hum',p:{h:'#3b3232',c:'#6a4a3a'}},
+  guard:{s:'hum',p:{h:'#4e5d7d',c:'#3e4f6e'}},
+  miner:{s:'hum',p:{h:'#5c5248',s:'#8c9a98',e:'#a9d3c8',c:'#6b5a44',w:'#7c7d85'}},
+  ash:{s:'hum',p:{h:'#4a4a52',s:'#8f8f8f',e:'#d9653b',c:'#3a3a40',l:'#2e2e34',w:'#6f7078'}},
+  priest:{s:'hum',p:{h:'#77737a',s:'#8f8f8f',e:'#c56a3a',c:'#66626b',w:'#b5573a'}},
+  king:{s:'hum',p:{h:'#b89a4a',s:'#b8b2a2',e:'#7fd0c0',c:'#2c2833',l:'#221f28',b:'#1a171f',w:'#7fb3b5'}},
+  ironmask:{s:'hum',p:{h:'#6f7078',s:'#6f7078',e:'#e07040',c:'#4a4b52',l:'#34353b',w:'#9a9ba3'}},
+  mir:{s:'hum',p:{h:'#4a3a2c',c:'#4a5a3a',w:'#8a6e4b'}},
+  wolf:{s:'wolf',p:{g:'#6b6458',e:'#d9b26a',n:'#1d1a18'}},
+  dog:{s:'wolf',p:{g:'#9a7448',e:'#e2d7c0',n:'#1d1a18'}},
+  spider:{s:'spider',p:{l:'#3a3540',b:'#4d4656',e:'#c56a5a'}},
+  cspider:{s:'spider',p:{l:'#3e5a60',b:'#5a7f86',e:'#d2ad66'}},
+  golem:{s:'golem',p:{r:'#5c5a68',c:'#8cc0bc',e:'#e6d08a'}},
+  rats:{s:'rats',p:{r:'#6a6058',t:'#a08478'}}
+};
+function sprite(key,cx,bottom,scale,flash,bob){bob=bob||0;const ch=CH[key];if(!ch)return;const rows=SPR[ch.s],pal=Object.assign({},DEF,ch.p);const w=rows[0].length*scale,h=rows.length*scale;const x0=Math.round(cx-w/2),y0=bottom-h-bob;
+  g.fillStyle='rgba(10,10,14,.45)';g.fillRect(x0+scale,bottom-1,w-scale*2,2);
+  rows.forEach((row,y)=>{[...row].forEach((ch2,x)=>{if(ch2==='.')return;P(x0+x*scale,y0+y*scale,scale,scale,flash?'#efe6d2':pal[ch2]);});});}
+/* ---------- 실시간 애니메이션 ---------- */
+let T=0;const RM=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const ANIM={art:'title',npc:null,enemy:null,flash:false,dog:false,kick:null,slash:-9,pops:[],dieAt:null};
+function twinkle(seed,n,maxY){const r=rng(seed);for(let i=0;i<n;i++){const x=Math.floor(r()*96),y=Math.floor(r()*maxY),v=(T+Math.floor(r()*24))%24;if(v<2)P(x,y,1,1,'#f0e6cc');else if(v<4)P(x,y,1,1,'#b8b0c0');}}
+function flame(x,base,w,h,k){for(let i=0;i<w;i++){const c=1-Math.abs(i-(w-1)/2)/(w/2+.5);const hh=Math.max(1,Math.round(h*c+Math.sin(T*.9+i*1.7+k)*1.3+((T*7+i*13+k)%3)-1));for(let y=0;y<hh;y++){const f=y/hh;P(x+i,base-y,1,1,f<.4?'#b5573a':f<.78?'#e08a4a':'#f0c070');}}}
+function sparks(x0,w,base,n,k,c){for(let i=0;i<n;i++){const life=12+(i*7)%9,t=(T+i*5+k)%life;const x=x0+((i*37+k)%w)+Math.round(Math.sin((T+i*3)*.3));P(x,base-t*1.4,1,1,t<life*.6?(c||'#e08a4a'):'#6a3428');}}
+function fall(n,c,k,sp){for(let i=0;i<n;i++){const x=(i*53+k+Math.round(Math.sin((T*sp+i*10)*.15)*3)+960)%96;const y=((i*29+k)+Math.floor(T*sp))%58-2;P(x,y,1,1,c);}}
+function smoke(cx,top,c){for(let i=0;i<9;i++){const d=(T*.5+i*3.3)%26;P(cx+Math.round(Math.sin((d+T*.2)*.25)*2+d*.15),top-d,2-(d>14?1:0),1,c);}}
+function flicker(x,y,w,h,cols,k){P(x,y,w,h,cols[(T+k)%7<2?1:(T+k)%11<1?2:0]);}
+const FX={
+  title(){twinkle(3,34,32);for(let i=0;i<5;i++){const x=30+((i*17+Math.floor(T*.4))%40),y=44+Math.round(Math.sin((T+i*9)*.2)*2);if((T+i*4)%10<6)P(x,y,1,1,'#d8cf8a');}P(45+Math.floor(T/4)%6,41,1,1,'#5a7a8a');},
+  village(){FX._village(false)},village_ash(){FX._village(true)},
+  _village(ash){if(!ash)twinkle(1,14,20);
+    [[7,33],[70,33],[88,37]].forEach(([x,y],i)=>{if(!ash)flicker(x,y,2,2,['#d9b26a','#ecc87e','#b8904a'],i*5);});
+    P(15,24,2,4,'#4a3530');smoke(15,23,ash?'#6d6870':'#4a4e5e');P(74,24,2,4,'#4a3530');smoke(74,23,ash?'#6d6870':'#4a4e5e');
+    if(ash){fall(30,'#8a8690',3,.6);smoke(40,18,'#5c5860');smoke(60,16,'#5c5860');}
+    P(45+Math.floor(T/3)%6,38,1,1,'#5a7a8a');},
+  dry(){for(let i=0;i<14;i++){const x=(i*31+Math.floor(T*.8))%100-2,y=40+(i*7)%13;P(x,y,2,1,'#8a7050');}},
+  river(){twinkle(2,8,14);[[63,28],[77,28]].forEach(([x,y],i)=>flicker(x,y,2,2,['#d9b26a','#ecc87e','#b8904a'],i*4));
+    for(let y=34;y<54;y++){P(0,y,96,1,'#2e4a64');const sp=.3+(y-34)*.06,off=Math.floor(T*sp+y*5)%12;for(let x=-12;x<96;x+=12)P(x+off,y,3+(y%2),1,'#36587a');}
+    for(let i=0;i<10;i++){if((T+i*7)%14<3)P((i*41)%90+3,36+(i*13)%17,2,1,'#8fb0c4');}
+    P(40,40,36,2,'#6e5640');for(let x=42;x<76;x+=6)P(x,42,1,6,'#4f3d2e');
+    const by=Math.round(Math.sin(T*.25));P(10,45+by,16,2,'#5a4535');P(12,47+by,12,1,'#4a3828');P(17,35+by,1,10,'#6e5640');tri(19,36+by,8,'#a39a86',2.6);
+    for(let x=0;x<14;x+=2){const h=6+((x*7)%5),sw=Math.round(Math.sin(T*.2+x*.5));P(x,54-h,1,h-2,'#6a7a46');P(x+sw,53-h,1,2,'#6a7a46');P(x+sw,53-h,1,1,'#8f8a58');}},
+  forest(){twinkle(6,16,24);flame(46,46,5,6,0);sparks(45,6,41,4,1,'#f0c070');
+    if(!S||!S.f||S.f.reed!=='guild'){const w=Math.floor(T/3)%2;P(42,24,6,4,'#29321f');P(42,24,6-w,4,'#8a3b3b');P(42+5-w,25,1,2,'#8a3b3b');}},
+  mine(){twinkle(7,12,18);[[33,33],[60,33]].forEach(([x,y],i)=>{const on=(T+i*5)%9<6;P(x,y,4,4,on?'#5a4a30':'#3e3424');P(x+1,y+1,2,2,on?'#f0d080':'#c09850');});
+    for(let i=0;i<8;i++){const x=40+((i*13+Math.floor(T*.3))%18),y=34+((i*7+Math.floor(T*.15))%12);P(x,y,1,1,'#3a3a48');}},
+  cave(){FX._cave(false)},pump(){FX._cave(true)},
+  _cave(pump){[[8,44,7],[12,44,4],[84,43,8],[89,44,5],[24,8,4],[70,7,5]].forEach(([x,y,h],i)=>{const v=(T+i*6)%16;if(v<8){P(x+1,y-h,1,h,v<4?'#c8ecdf':'#8cc8c4');}});
+    [30,62].forEach((x,i)=>{const t=(T+i*11)%22;if(t<12)P(x,6+t*3,1,2,'#5a7f86');else if(t<14)P(x-1,44,3,1,'#3e5a60');});
+    if(pump){const v=Math.floor(Math.sin(T*.35)*2+2);P(44,24,8,12,['#22383a','#2a4446','#325254','#3a6062','#426e70'][v]);P(45,25,6,10,'#82c4c0');P(46,26,2,7,'#cfeee2');if(v>2)P(47,27,1,4,'#f0fff8');
+      sparks(40,16,22,6,2,'#82c4c0');}},
+  crypt(){[[30,37],[66,37]].forEach(([x,y],i)=>{const h=1+((T+i*3)%5<2?1:0);P(x,y-h,1,h,'#e0b060');if((T+i)%6<2)P(x,y-h-1,1,1,'#f0d090');});
+    for(let i=0;i<6;i++){const x=20+((i*19+Math.floor(T*.2))%56),y=10+((i*11+Math.floor(T*.1))%30);P(x,y,1,1,'#2e2c34');}},
+  monastery(){const g1=(T%20)<10;[30,36,58,64].forEach(x=>{P(x,29,2,6,g1?'#a85c4a':'#bb6a52');});circ(48,30,3,g1?'#b5673f':'#c87a48');P(48,30,1,1,'#f0b070');
+    for(let i=0;i<6;i++){const x=4+((i*7+Math.floor(T/4))%42);if(x<43)fig(x,40+((x+i)%2&&(T%4<2)?0:0),'#26242a');}
+    fall(55,'#8a8690',12,.5);},
+  hall(){P(39,22,18,10,'#3a1e1c');flame(41,31,14,14,0);sparks(38,20,18,12,3,'#7a7680');},
+  tower(){sparks(30,36,44,16,0);[[44,14],[50,20],[45,28],[51,34]].forEach(([x,y],i)=>flicker(x,y,1,3,['#d0703f','#f09050','#8a4028'],i*3));
+    const w=Math.floor(T/3)%2;[[37,12],[60,12]].forEach(([x,y])=>{P(x,y,4,6,'#2a1b1f');P(x,y,4-w,6,'#6a2a2a');P(x+3-w,y+2,1,3,'#6a2a2a');});},
+  forge(){P(28,16,40,3,'#c56a3a');P(29,15,38,1,(T%6<3)?'#e09050':'#d07a40');
+    for(let i=0;i<9;i++){const x=30+(i*11)%36,ph=(T+i*4)%12;if(ph<3)P(x,15-ph,1,1,'#f0a060');}sparks(30,36,14,10,5,'#e09050');
+    const sw=Math.round(Math.sin(T*.2));P(34,0,1,18,'#1d1315');P(61,0,1,18,'#1d1315');P(34+sw,0,1,18,'#4a4048');P(61-sw,0,1,18,'#4a4048');},
+  road(){[[0,6,10],[50,10,7]].forEach(([o,y,w])=>{const x=Math.floor(T*.15+o)%130-24;P(x,y,w,2,'#5a6580');P(x+2,y-1,w-4,1,'#5a6580');});
+    for(let i=0;i<8;i++){const x=(i*23)%96,sw=Math.round(Math.sin(T*.25+i));P(x+sw,44+(i*5)%8,1,1,'#66784a');}},
+  end(){[0,1].forEach(i=>{const x=Math.floor(T*.4+i*30)%120-10,y=14+i*4+Math.round(Math.sin(T*.3+i)),f=(T+i)%4<2;P(x,y,1,1,'#2a2430');P(x+1,y+(f?1:-1),1,1,'#2a2430');P(x-1,y+(f?1:-1),1,1,'#2a2430');});
+    if(T%16<8)P(42,35,13,1,'#e8c890');},
+  map(){if(!S)return;const L=LOCS[S.loc];if(Math.floor(T/4)%2){P(L.x-3,L.y-3,7,1,'#d2ad66');P(L.x-3,L.y+3,7,1,'#d2ad66');P(L.x-3,L.y-3,1,7,'#d2ad66');P(L.x+3,L.y-3,1,7,'#d2ad66');}}
+};
+const DIG={'0':'111101101101111','1':'010110010010111','2':'111001111100111','3':'111001111001111','4':'101101111001001','5':'111100111001111','6':'111100111101111','7':'111001010010010','8':'111101111101111','9':'111101111001111','+':'000010111010000','-':'000000111000000'};
+function ptext(str,x,y,c){[...str].forEach((ch,k)=>{const d=DIG[ch];if(!d)return;for(let i=0;i<15;i++)if(d[i]==='1'){P(x+k*4+i%3+1,y+Math.floor(i/3)+1,1,1,'#15181e');}});[...str].forEach((ch,k)=>{const d=DIG[ch];if(!d)return;for(let i=0;i<15;i++)if(d[i]==='1')P(x+k*4+i%3,y+Math.floor(i/3),1,1,c);});}
+function pop(v,who){if(RM)return;const m={e:[50,20,'#efe6d2'],d:[36,26,'#82b4b3'],p:[10,38,'#c46a5e'],h:[10,38,'#8fab78']}[who];ANIM.pops.push({s:(who==='h'?'+':who==='p'?'-':'')+v,x:m[0]+rnd(-2,2),y:m[1],c:m[2],t0:T});}
+function paint(){g.clearRect(0,0,96,54);(ART[ANIM.art]||ART.road)();const fx=FX[ANIM.art];if(fx&&!RM)fx();
+  if(ANIM.npc)sprite(ANIM.npc,78,51,2,false,RM?0:Math.floor(T/6)%2);
+  if(ANIM.dog)sprite('dog',14,52,2,false,RM?0:Math.floor(T/3)%2);
+  const e=ANIM.enemy;if(e){let dx=ANIM.kick&&T<=ANIM.kick.until?ANIM.kick.dx:0,bob=RM?0:Math.floor((T+2)/4)%2;
+    if(e.hp<=0&&ANIM.dieAt!=null){bob=-Math.min(30,(T-ANIM.dieAt)*3);}
+    sprite(e.spr,48+dx,52,e.scale||2,ANIM.flash,bob);
+    const sl=T-ANIM.slash;if(sl>=0&&sl<3){for(let i=0;i<(sl===0?6:12);i++){P(56-i,22+i,1,1,'#efe6d2');P(57-i,22+i,1,1,'#efe6d2');}}}
+  ANIM.pops=ANIM.pops.filter(p=>T-p.t0<10);ANIM.pops.forEach(p=>ptext(p.s,p.x,p.y-(T-p.t0),p.c));}
+function draw(art,npc,enemy,flash){ANIM.art=art;ANIM.npc=npc;ANIM.enemy=enemy;ANIM.flash=!!flash;if(!enemy){ANIM.dog=false;ANIM.pops=[];ANIM.dieAt=null;}paint();}
+let lastTs=0;function loop(ts){requestAnimationFrame(loop);if(document.hidden||ts-lastTs<100)return;lastTs=ts;T++;paint();}
+if(!RM)requestAnimationFrame(loop);
+
+/* ---------- 렌더링 ---------- */
+function para(arr){return arr.filter(Boolean).map(t=>{
+  if(t.startsWith('§'))return`<p class="doc">${t.slice(1)}</p>`;
+  const m=t.match(/^(\S{1,8}) 「([\s\S]*)」$/);
+  if(m)return`<p class="say"><b>${m[1]}</b>「${m[2]}」</p>`;
+  return`<p>${t}</p>`;}).join('');}
+function status(){const st=$('#stat');if(!S){st.hidden=true;return;}st.hidden=false;
+  $('#hpb').style.width=Math.max(0,S.hp/S.maxHp*100)+'%';$('#hpt').textContent=`${Math.max(0,S.hp)}/${S.maxHp}`;
+  $('#sp').innerHTML=[0,1,2,3].map(i=>`<span class="pip${i<S.sp?' on':''}"></span>`).join('');
+  $('#gold').textContent=S.gold;$('#pot').textContent=S.pot;$('#lv').textContent=S.lvl;
+  const r=remain(),d=$('#days');d.textContent=`${S.day}일째 · ${S.dlc?'역병':S.act===1?'물':'침공까지'} ${r}일`;d.classList.toggle('warn',r<=15);
+  $('#gear').textContent=`${S.name}${S.trait?' ('+TRAITS[S.trait]+')':''}${S.f.dog?' · 동료 잿불':''} · ${W[S.wpn].n} (+${W[S.wpn].a}) · ${A[S.arm].n} (방어 ${defP()}) ${S.acc?' · '+ACC[S.acc].n:''}${S.salt?' · 소금독!':''}${S.dlc?` · 기름 단지 ${S.bomb||0} · 해독제 ${S.anti||0}`:''} · 경험 ${S.xp}/${need()}`;}
+function renderChoices(list,grid){const nav=$('#ch');nav.innerHTML='';nav.classList.toggle('grid',!!grid);let n=0;
+  list.forEach(c=>{if(c.if&&!c.if())return;const ok=!c.need||c.need();const b=document.createElement('button');b.className='choice fade';b.disabled=!ok;n++;
+    b.innerHTML=`<span class="t">${c.t}</span>${c.sub?`<span class="sub">${c.sub}</span>`:''}${!ok&&c.why?`<span class="sub why">${c.why}</span>`:''}${!grid&&ok?`<kbd>${n}</kbd>`:''}`;
+    b.onclick=()=>{if(c.fn){const r=c.fn();if(r)go(r);}else if(c.go)go(c.go);};nav.appendChild(b);});}
+function show(d){draw(d.art,d.npc);$('#labels').innerHTML=d.labels||'';$('#place').textContent=d.place||'';$('#ttl').textContent=d.title||'';
+  const t=$('#txt');t.innerHTML=(NOTE?`<div class="note">${NOTE}</div>`:'')+para(d.text||[]);NOTE='';t.classList.remove('fade');void t.offsetWidth;t.classList.add('fade');
+  $('#ebar').hidden=true;$('#log').hidden=true;status();renderChoices(d.choices||[]);window.scrollTo({top:0});}
+function go(id){world();if(id.startsWith('E_'))return ending(id.slice(2));const d=SC[id]();CUR=id;C=null;if(d.save){S.last=id;save();}show(d);}
+
+/* ---------- 상점 ---------- */
+function shop(items){return items.map(it=>({t:`${it.n} — ${it.p}금`,sub:it.d,if:it.if,need:()=>S.gold>=it.p,why:'금화가 모자란다',fn:()=>{S.gold-=it.p;it.buy();NOTE=it.note||`${j(it.n,'을','를')} 샀다.`;return CUR;}}));}
+const potion=p=>({n:'치유 물약',p,d:'체력 24 회복',buy:()=>S.pot++});
+const weapon=(k,p)=>({n:W[k].n,p,d:`공격력 +${W[k].a}`,if:()=>W[S.wpn].a<W[k].a,buy:()=>S.wpn=k});
+const armor=(k,p)=>({n:A[k].n,p,d:`방어 ${A[k].d}`,if:()=>A[S.arm].d<A[k].d,buy:()=>S.arm=k});
+
+/* ---------- 전투 ---------- */
+function fight(key,o){o=o||{};const b=EN[key],hp=Math.round(b.hp*(o.mul||1));C={e:Object.assign({},b,{hp}),max:hp,o,log:[o.intro||`${j(b.n,'이','가')} 앞을 막아선다.`],turn:0,charge:false,guard:false,res:null,flash:false};S.sp=Math.max(S.sp,S.acc==='pearl'?3:2);ANIM.dieAt=null;ANIM.pops=[];renderCombat();window.scrollTo({top:0});}
+function renderCombat(){const e=C.e;ANIM.dog=!!S.f.dog;draw(C.o.art||LOCS[S.loc].art,null,e,C.flash);$('#labels').innerHTML='';
+  $('#place').textContent=e.boss?'강적과의 결투':'전투';$('#ttl').textContent=e.n;$('#txt').innerHTML='';
+  const eb=$('#ebar');eb.hidden=false;eb.innerHTML=`<div class="row"><span>${e.n}</span><div class="bar"><i style="width:${Math.max(0,e.hp/C.max*100)}%"></i></div><span class="num">${Math.max(0,e.hp)}/${C.max}</span></div>${C.charge&&!C.res?'<div class="warn">강력한 공격이 온다 — 방패를 들어 피해를 줄여라.</div>':''}`;
+  const lg=$('#log');lg.hidden=false;const L=C.log.slice(-6);lg.innerHTML=L.map((l,i)=>`<div class="${i===L.length-1?'new':''}">${l}</div>`).join('');
+  status();
+  if(C.res){const lab={win:'계속',flee:'계속',lose:C.o.lose?'정신을 잃는다':'시야가 어두워진다'}[C.res];
+    renderChoices([{t:lab,fn:()=>{if(C.res==='win'){const w=C.o.win;if(typeof w==='function'){const r=w();if(r)go(r);}else go(w);}else if(C.res==='flee')go(C.o.flee||LOCS[S.loc].hub);else go(C.o.lose||'dead');}}]);return;}
+  renderChoices([
+    {t:'공격',sub:'명중 높음',fn:()=>act('atk')},
+    {t:'강타',sub:'기력 2 · 1.8배',need:()=>S.sp>=2,why:'기력 부족',fn:()=>act('str')},
+    {t:'방패 막기',sub:'피해 70% 감소 · 기력+',fn:()=>act('grd')},
+    {t:`물약 (${S.pot})`,sub:'체력 +24',need:()=>S.pot>0&&S.hp<S.maxHp,why:S.pot>0?'체력이 가득하다':'물약이 없다',fn:()=>act('pot')},
+    {t:`기름 단지 (${S.bomb||0})`,sub:'방어 무시 고정 피해',if:()=>S.dlc||S.bomb>0,need:()=>S.bomb>0,why:'기름 단지가 없다',fn:()=>act('bomb')},
+    {t:`해독제 (${S.anti||0})`,sub:'소금독 치료',if:()=>!!S.dlc,need:()=>S.anti>0&&S.salt,why:S.anti>0?'중독되지 않았다':'해독제가 없다',fn:()=>act('anti')},
+    {t:'도주',sub:'성공률 55%',need:()=>!e.boss&&!C.o.noflee,why:'물러설 수 없다',fn:()=>act('run')}
+  ],true);}
+function flashEnemy(){C.flash=true;renderCombat();setTimeout(()=>{if(!C)return;C.flash=false;renderCombat();},110);}
+function hurt(){const f=$('#frame');f.classList.remove('hit');void f.offsetWidth;f.classList.add('hit');}
+function act(k){if(!C||C.res)return;const e=C.e,L=C.log;let hitE=false;
+  if(S.salt&&k!=='anti'){S.hp-=2;pop(2,'p');L.push('소금독이 살갗을 굳힌다. 체력 -2.');if(S.hp<=0){S.hp=0;C.res='lose';L.push('무릎이 꺾인다.');renderCombat();return;}}
+  if(k==='atk'||k==='str'){const s=k==='str';if(s)S.sp-=2;if(chance(s?.75:.88)){let d=rollAtk();if(s)d=Math.round(d*(S.acc==='hook'?2.2:1.8));d=Math.max(1,d-e.def);e.hp-=d;hitE=true;pop(d,'e');ANIM.slash=T;ANIM.kick={dx:2,until:T+1};L.push(s?`강타! ${e.n}에게 ${d}의 피해.`:`${e.n}에게 ${d}의 피해를 입혔다.`);}else L.push(s?'강타가 허공을 가른다.':'검이 빗나갔다.');}
+  else if(k==='grd'){C.guard=true;S.sp=Math.min(4,S.sp+(S.acc==='pearl'?2:1));L.push('방패를 들고 자세를 낮춘다.');}
+  else if(k==='pot'){S.pot--;const h=Math.min(S.maxHp-S.hp,24);S.hp+=h;pop(h,'h');L.push(`물약을 마셨다. 체력 +${h}.`);}
+  else if(k==='bomb'){S.bomb--;const d=18+S.lvl;e.hp-=d;hitE=true;pop(d,'e');ANIM.slash=T;L.push(`기름 단지가 터진다! ${e.n}에게 ${d}의 피해.`);}
+  else if(k==='anti'){S.anti--;S.salt=false;const h=Math.min(S.maxHp-S.hp,10);S.hp+=h;pop(h,'h');L.push('해독제를 삼켰다. 소금독이 씻겨 나간다.');}
+  else if(k==='run'){if(chance(.55)){L.push('간신히 몸을 뺐다.');C.res='flee';renderCombat();return;}L.push('도망치지 못했다!');}
+  if(S.f.dog&&e.hp>0&&k!=='run'&&chance(.55)){const d=Math.max(1,rnd(2,4)+Math.floor(S.lvl/2)-Math.floor(e.def/2));e.hp-=d;hitE=true;pop(d,'d');L.push(`잿불이 ${j(e.n,'을','를')} 물어뜯는다. ${d}의 피해.`);}
+  if(e.hp<=0){e.hp=0;C.res='win';ANIM.dieAt=T;L.push(`${j(e.n,'이','가')} 쓰러졌다.`);if(e.gold){S.gold+=e.gold;L.push(`금화 ${e.gold}닢을 챙겼다.`);}gainXp(e.xp).forEach(m=>L.push(m));renderCombat();return;}
+  enemyTurn();
+  if(S.hp<=0){S.hp=0;C.res='lose';L.push('무릎이 꺾인다.');renderCombat();return;}
+  S.sp=Math.min(4,S.sp+1);
+  if(hitE)flashEnemy();else renderCombat();}
+function enemyTurn(){const e=C.e,L=C.log;C.turn++;
+  if(e.tele&&!C.charge&&C.turn%e.tele===0){C.charge=true;C.guard=false;L.push(e.teleMsg);return;}
+  const was=C.charge;C.charge=false;
+  if(chance(was?.95:.8)){let d=Math.max(1,Math.round(rnd(e.a[0],e.a[1])*(was?2.2:1))-defP());if(C.guard)d=Math.max(1,Math.ceil(d*.3));S.hp-=d;pop(d,'p');ANIM.kick={dx:was?-6:-3,until:T+2};
+    L.push(`${was?'강력한 일격! ':''}${e.n}의 공격, ${d}의 피해${C.guard?' (방패로 막았다)':''}.`);hurt();
+    if(e.salt&&!S.salt&&S.acc!=='charm'&&chance(.35)){S.salt=true;L.push('상처가 하얗게 굳는다. 소금독에 걸렸다!');}
+    if(e.drain){const h=Math.floor(d/2);if(h){e.hp=Math.min(C.max,e.hp+h);L.push(`${j(e.n,'이','가')} 흘린 피를 재로 삼켜 ${h} 회복한다.`);}}}
+  else L.push(`${e.n}의 공격이 빗나갔다.`);
+  C.guard=false;}
+
+/* ---------- 여행 ---------- */
+function travel(dest){const x=tick(tdays(S.loc,dest));if(x)return x;S.loc=dest;const hub=LOCS[dest].hub;
+  if(chance(S.trait==='scout'?.18:.3)){let pool=S.dlc?['crab','smuggler','saltghoul']:S.act===1?(S.f.reed==='bandit'?['wolf','wolf']:['wolf','bandit','wolf']):['ash','wolf','ash'];const k=pool[rnd(0,pool.length-1)];
+    const intros={crab:'모래톱에서 집채만 한 바위게가 집게를 쳐든다!',smuggler:'짐수레를 끌던 밀수꾼들이 칼을 뽑는다!',saltghoul:'하얗게 굳은 사람 하나가 비틀비틀 다가온다. 소금 망령이다!',wolf:'길 위에서 굶주린 들개 무리가 덮쳐 온다!',bandit:'바위 뒤에서 붉은 두건의 약탈자가 튀어나온다!',ash:'안개 속에서 눈에 불이 붙은 잿빛 병사가 걸어 나온다!'};
+    fight(k,{art:S.dlc?'beach':'road',intro:intros[k],win:hub,flee:hub});return null;}
+  if(chance(.25)){const pool=Object.keys(EVENTS).filter(k=>S.dlc?EVENTS[k].act==='d1':(EVENTS[k].act===0||EVENTS[k].act===S.act));S.ev=pool[rnd(0,pool.length-1)];return'event';}
+  return hub;}
+
+/* ---------- 장면 ---------- */
+const SC={};
+const leave={t:'지도를 펼친다',go:'map'};
+function rest(cost,label){return{t:label||(cost?`방을 잡고 쉰다 (${cost}금, 1일)`:'쉬어 간다 (1일)'),sub:'체력과 기력 회복',need:()=>S.gold>=cost&&S.hp<S.maxHp,why:S.hp>=S.maxHp?'지치지 않았다':'금화가 모자란다',fn:()=>{S.gold-=cost;const x=tick(1);if(x)return x;S.hp=S.maxHp;S.sp=2;NOTE='푹 쉬었다. 체력이 가득 찼다.';return CUR;}};}
+
+SC.map=()=>{const L=LOCS[S.loc];
+  const labels=Object.keys(LOCS).filter(visible).map(k=>{const p=LOCS[k];const below=['reed','forest','mon','home','port','flats','light'].includes(k);return`<span class="lab${k===S.loc?' here':''}" style="left:${p.x/96*100}%;top:${(p.y+(below?3:-9))/54*100}%">${p.n}</span>`;}).join('');
+  const dests=Object.keys(LOCS).filter(k=>k!==S.loc&&visible(k));
+  return{place:S.dlc?'해안 지도':'세계 지도',title:'어디로 갈 것인가',art:S.dlc?'seamap':'map',labels,
+    text:[`지금 있는 곳은 ${L.n}. 길 위의 하루하루가 ${S.dlc?'흰모래항 사람들을 소금으로 굳힌다':S.act===1?'돌샘의 마지막 물을 줄인다':'잿빛 군대를 돌샘 가까이 데려온다'}.`],
+    choices:[...dests.map(k=>({t:`${LOCS[k].n}(으)로`,sub:`${tdays(S.loc,k)}일 걸림`,fn:()=>travel(k)})),{t:`${L.n}에 머문다`,go:L.hub}]};};
+
+SC.intro=()=>({place:'돌샘마을',title:'금 간 심장',art:'village',npc:'elder',text:[
+  '돌샘마을 우물 밑바닥에는 삼백 년 동안 물을 맑게 지켜 온 성수정, \'샘의 심장\'이 잠겨 있다.',
+  '지난 그믐밤 그 심장에 금이 갔다. 사흘 만에 물에서 쇠 냄새가 나기 시작했고, 아이 둘이 열병으로 누웠다.',
+  `장로 하란 「남은 물로 버틸 수 있는 건 길어야 일흔다섯 날이네. 북쪽 어딘가에 수정을 캐는 광산 도시가 있었다고 들었지. 이 마을에서 칼을 쥘 줄 아는 건 자네뿐일세, ${S.name}.」`,
+  '하란이 당신 아버지의 낡은 검과 금화 서른 닢, 물약 두 병을 내민다.'],
+  choices:[{t:'검을 받아 든다',go:'home'}]});
+
+SC.home=()=>{const f=S.f;
+  if(S.act===2&&f.king&&f.tower)return{place:'돌샘마을',title:'돌아온 길',art:'village',save:true,text:['돌샘의 지붕들이 보인다. 우물 위로 맑은 물안개가 피어오른다.','그러나 마을 문 앞에 서 있는 것은 환영하는 사람들이 아니라, 지팡이를 짚은 장로 하란 한 사람뿐이다.'],choices:[{t:'하란에게 다가간다',go:'homecoming'}]};
+  const t=[];
+  if(S.act===1&&!f.crystal){t.push('돌샘마을. 우물가에 물동이를 든 사람들이 줄을 섰다. 물은 탁하고, 사람들은 말이 없다.');if(remain()<=25)t.push('우물물이 누렇게 변했다. 열병에 누운 집이 늘었다. 서둘러야 한다.');}
+  else if(S.act===1)t.push('품속의 수정이 따뜻하다. 마을 사람들이 당신을 알아보고 하나둘 모여든다.');
+  else{t.push('망루마다 횃불이 늘었다. 동쪽 하늘이 잿빛으로 흐리다. 사람들은 우물물을 길어 지하실에 숨긴다.');t.push(`할 일: ${f.king?'왕 — 끝냄':'회색 수도원의 이름 없는 왕'} · ${f.tower?'검은탑 — 끝냄':'검은탑의 군단'}`);}
+  return{place:'돌샘마을',title:S.act===1?'마르는 우물':'잿빛 하늘 아래',art:S.act===2?'village_ash':'village',save:true,text:t,choices:[
+    {t:'장로에게 샘의 심장을 건넨다',if:()=>S.act===1&&f.crystal,go:'deliver'},
+    {t:'장로 하란의 집',go:'elder'},
+    {t:'대장장이 도윤의 대장간',go:'smith'},
+    {...rest(0,'집에서 쉰다 (1일)')},
+    leave]};};
+
+SC.elder=()=>{const f=S.f,t=[];
+  if(S.act===1){t.push('하란 「갈대나루로 가게. 강을 따라 엿새 길이야. 상인들이라면 북쪽 광산 소식을 알고 있을 걸세.」');
+    if(f.caravan)t.push('하란 「갈대나루에서 보낸 물 수레가 도착했네. 덕분에 몇 주는 더 버틸 수 있겠어.」');
+    if(f.crystal)t.push('하란 「그 빛... 정말 찾아왔군. 어서 우물로 가세.」');
+    t.push(`남은 물로 버틸 수 있는 날: ${remain()}일.`);}
+  else{t.push('하란 「잿빛 병사는 북동쪽 검은탑에서 만들어지고, 그들을 부리는 왕은 동쪽 회색 수도원에 있다더군. 하나만 끊어서는 안 되네. 둘 다 끝내야 돌샘이 사네.」');
+    if(f.map&&!f.king)t.push('하란 「쇠울 사람들이 준 그 지도... 수도원 아래로 이어진 옛 묘지 길이 그려져 있다고 했지. 정문보다 나을 걸세.」');
+    t.push(`정찰병 말로는 군세가 이곳에 닿기까지 ${remain()}일.`);}
+  return{place:'돌샘마을 · 장로의 집',title:'장로 하란',art:S.act===2?'village_ash':'village',npc:'elder',text:t,choices:[{t:'물러난다',go:'home'}]};};
+
+SC.smith=()=>({place:'돌샘마을 · 대장간',title:'대장장이 도윤',art:'village',npc:'smith',
+  text:['모루 위에서 불똥이 튄다.','도윤 「검이 무디면 마음도 무뎌지는 법이지. 마을 일이니 값은 깎아 주겠네.」'],
+  choices:[...shop([potion(15),weapon('long',60),armor('chain',70)]),{t:'대장간을 나선다',go:'home'}]});
+
+SC.deliver=()=>({place:'돌샘마을 · 우물',title:'다시 맑아지는 물',art:'village',npc:'elder',text:[
+  '하란이 떨리는 손으로 수정을 바구니에 담아 우물 바닥으로 내린다. 물빛이 천천히, 아주 천천히 맑아진다.',
+  S.f.gem==='raw'?'새로 캔 원석은 옛 심장보다 밝다. 우물 벽에 비친 빛이 아침까지 꺼지지 않는다.':'쇠울 펌프에서 뽑아 온 수정은 낡았지만, 아직 몇 대는 버틸 것이다.',
+  '그날 밤 잔치가 열렸다. 그러나 새벽, 동쪽으로 사냥을 나갔던 미르가 피투성이로 돌아온다.',
+  '미르 「회색 피부의 병사들이... 눈에 불이 붙은 것들이, 동쪽 개울 마을을 통째로 끌고 갔어요. 다음은 여기예요.」'],
+  choices:[{t:'미르의 이야기를 끝까지 듣는다',fn:()=>{S.act=2;S.inv=S.day+65;S.hp=S.maxHp;S.loc='home';return'act2';}}]});
+SC.act2=()=>({place:'돌샘마을',title:'잿빛 군단',art:'village_ash',npc:'mir',text:[
+  '미르가 본 것은 이렇다. 잿빛 병사들은 북동쪽 검은탑에서 쏟아져 나오고, 그들을 부리는 \'이름 없는 왕\'은 동쪽 회색 수도원에 머문다.',
+  '하란 「예순다섯 날. 정찰병들이 본 군세가 이곳까지 닿는 데 걸릴 시간이네. 우물을 살렸더니 이제는 마을이 통째로 사라지게 생겼군.」',
+  S.f.map?'품 안에서 쇠울의 브릭이 준 지하 지도가 바스락거린다.':'',
+  '지도에 회색 수도원과 검은탑이 새로 표시되었다.'],choices:[{t:'채비를 한다',go:'home'}]});
+
+SC.homecoming=()=>({place:'돌샘마을 · 마을 문',title:'영웅이 머물 자리',art:'village',npc:'elder',text:[
+  '하란 「자네가 해낸 일은 다 들었네. 왕이 무너지고, 탑의 불이 꺼졌다지.」',
+  '하란의 눈이 당신 손등에 말라붙은 재와 피에 머문다.',
+  '하란 「그런데 아이들이 자네 흉내를 낸다며 나무칼로 서로를 찌르네. 어른들은 밤마다 자네 이야기를 하며 문을 걸어 잠그고. 자네가 무서운 거야.」',
+  '하란 「돌샘은 작은 마을일세. 영웅이 머물 자리가 없어. ...떠나 주게.」',
+  '마을 문 뒤에서 몇몇 젊은이들이 당신을 바라보고 있다.'],
+  choices:[
+    {t:'고개를 숙이고 돌아선다',fn:()=>'E_exile'},
+    {t:'검을 뽑는다',sub:'이 마을을 지킨 것은 나다',fn:()=>'E_sword'},
+    {t:'따르겠다는 이들과 함께 새 샘을 찾아 떠난다',need:()=>S.karma>=4,why:'당신을 따라나설 만큼 당신을 믿는 이가 없다',fn:()=>'E_found'}]});
+
+/* 갈대나루 */
+SC.reed=()=>{const f=S.f,t=[];
+  if(!f.reed)t.push('강이 셋으로 갈라지는 곳, 갈대나루. 짐배와 고함 소리가 가득하다. 그런데 북쪽 고개로 향하는 수레는 한 대도 보이지 않는다.');
+  else if(f.reed==='guild')t.push('상인조합의 푸른 깃발이 부두마다 걸려 있다. 북쪽 고개로 향하는 수레가 다시 줄을 섰다.');
+  else if(f.reed==='bandit')t.push('부두 곳곳에 붉은 늑대 깃발이 꽂혔다. 곡식 값은 내렸지만, 상인들은 고개를 숙이고 다닌다.');
+  else t.push('부두 한쪽엔 푸른 깃발, 다른 쪽엔 붉은 깃발. 어색한 평화가 나루를 감싸고 있다.');
+  if(S.act===2)t.push('강 건너에서 잿빛 연기를 봤다는 뱃사람들의 이야기로 술렁인다.');
+  return{place:'갈대나루',title:'세 갈래 강의 나루',art:'river',save:true,text:t,choices:[
+    {t:'여관 \'젖은 장화\'',go:'inn'},{t:'상인조합 회관',go:'guild'},{t:'시장',go:'market'},
+    {t:'뒷골목 그물 창고',if:()=>f.rumor||f.metAlley,go:'alley'},{t:'현상금 게시판',go:'board'},leave]};};
+SC.inn=()=>{const f=S.f,t=['젖은 장화를 벽에 건 여관. 주인 베라가 잔을 닦는다.'];
+  if(S.act===1&&!f.reed){f.rumor=true;
+    t.push('베라 「쇠울? 북쪽 고개 너머 흙사람들의 광산이지. 그런데 지금은 못 가. 붉은 늑대단이 고개 어귀 붉은숲에 진을 치고 길을 막았거든. 조합하고 한판 붙는 중이라.」');
+    t.push('베라 「조합 회관의 모르간은 늑대단 두목 목에 현상금을 걸었고, 늑대단 쪽은 뒷골목에서 칼잡이를 구한다더군. 어느 쪽이든 고개만 열리면 되겠지.」');
+    if(f.metGuild&&f.metAlley&&!f.medFail)t.push('양쪽 이야기를 다 들은 사람은 당신이 처음일지도 모른다. 둘을 한 탁자에 앉힐 수 있다면...');}
+  else if(S.act===1)t.push('베라 「고개가 열렸어. 쇠울까지는 여드레쯤 걸릴 거야. 흙사람들은 낯선 이를 반기지 않으니 조심하고.」');
+  else t.push('베라 「회색 수도원? 거긴 산 사람이 들어가는 곳이 아니야. 순례자들이 재를 삼키는 세례를 받고 문을 지난다던데... 나오는 사람은 못 봤어.」');
+  return{place:'갈대나루 · 여관',title:'젖은 장화',art:'river',npc:'vera',text:t,choices:[
+    {t:'양쪽을 한 탁자에 앉힌다',sub:'협상에 4일',if:()=>S.act===1&&!f.reed&&!f.quest&&f.metGuild&&f.metAlley&&!f.medFail,fn:()=>{const x=tick(4);return x||'mediate';}},
+    rest(6),{t:'여관을 나선다',go:'reed'}]};};
+SC.guild=()=>{const f=S.f,t=[],ch=[];
+  if(f.reed==='bandit')t.push('회관은 텅 비었다. 문짝에 붉은 늑대 발자국이 찍혀 있다. 모르간은 첫 배를 타고 강 아래로 달아났다고 한다.');
+  else if(f.reed==='peace')t.push('모르간 「손해 보는 장사는 처음이군. 그래도 칼 소리보단 낫지. 물값은 약속대로 절반이네.」');
+  else if(f.reed==='guild'){if(!f.paid){const amt=f.seraSpared?100:200;t.push(f.seraSpared?'모르간 「목은 없고 말만 있군. 그래도 고개는 열렸으니, 절반만 주지.」':'모르간 「약속한 이백이네. 깔끔한 일 처리였어.」');ch.push({t:`보상을 받는다 (${amt}금)`,fn:()=>{f.paid=true;S.gold+=amt;NOTE=`금화 ${amt}닢을 받았다.`;return'guild';}});}
+    else t.push('모르간 「조합은 은혜를 잊지 않네. 물론 값은 따로 받지만.」');}
+  else{f.metGuild=true;
+    t.push('모르간이 금반지를 낀 손가락으로 장부를 두드린다. 회관 뒤편 창고에는 곡식 자루와 물통이 천장까지 쌓여 있다. 시장에서는 물 한 통에 은화 넷을 받는다.');
+    t.push(f.quest==='guild'?'모르간 「붉은숲은 고개 어귀에 있네. 세라 목을 가져오게.」':'모르간 「늑대단 두목 세라. 그 여자 목을 가져오면 금화 이백 닢. 고개도 열리고, 자네도 북쪽으로 갈 수 있지.」');
+    ch.push({t:'의뢰를 받는다',sub:'상인조합 편에 선다',if:()=>!f.quest,fn:()=>{f.quest='guild';f.rumor=true;NOTE='붉은숲이 지도에 표시되었다.';return'guild';}});}
+  ch.push({t:'회관을 나선다',go:'reed'});
+  return{place:'갈대나루 · 상인조합',title:'길드장 모르간',art:'river',npc:f.reed==='bandit'?null:'morgan',text:t,choices:ch};};
+SC.alley=()=>{const f=S.f,t=[],ch=[];
+  if(f.reed==='bandit')t.push('여우 칼 「약속은 지켰어. 고개는 열렸고, 창고는 비었지. 이제 나루는 우리 거야.」');
+  else if(f.reed||f.quest==='guild')t.push('그물 창고는 비어 있다. 생선 비린내만 남았다.');
+  else{f.metAlley=true;
+    t.push('그물 창고 안에서 여우 가면을 쓴 사내가 칼끝으로 사과를 깎는다.');
+    t.push('여우 칼 「조합 놈들은 가뭄 든 마을에 물을 세 배 값에 판다. 우린 그걸 막는 거야. 오늘 밤 조합 창고를 턴다. 경비대장만 눕혀 주면 늑대단이 고개를 열어 주지. 몫도 챙겨 주고.」');
+    ch.push({t:'창고 습격에 낀다',sub:'붉은 늑대단 편에 선다',if:()=>!f.quest,fn:()=>{f.quest='bandit';return'raid';}});}
+  ch.push({t:'골목을 빠져나온다',go:'reed'});
+  return{place:'갈대나루 · 뒷골목',title:'여우 칼',art:'river',npc:(f.reed&&f.reed!=='bandit')||f.quest==='guild'?null:'fox',text:t,choices:ch};};
+SC.raid=()=>({place:'갈대나루 · 조합 창고',title:'자정의 습격',art:'river',npc:'guard',text:['자정. 창고 자물쇠가 끊어지는 소리가 강물 소리에 묻힌다.','문이 열리는 순간 랜턴 불빛이 당신 얼굴을 비춘다. 조합 경비대장이 칼을 뽑는다.'],
+  choices:[{t:'경비대장에게 달려든다',fn:()=>{fight('guard',{art:'river',noflee:true,intro:'조합 경비대장 「도둑놈들! 한 놈도 못 나간다!」',win:'raidWin'});}}]});
+SC.raidWin=()=>{const f=S.f;if(!f.reed){f.reed='bandit';f.road=true;S.gold+=140;NOTE='늑대단의 몫으로 금화 140닢을 받았다. 쇠울 폐광이 지도에 표시되었다.';}
+  return{place:'갈대나루',title:'붉은 깃발',art:'river',npc:'sera',text:['늑대단이 창고의 곡식과 물통을 부두에 쏟아 놓는다. 사람들이 몰려든다.','다음 날 아침 모르간은 배를 타고 사라졌고, 세라가 부두에 붉은 깃발을 꽂았다.','세라 「약속대로 고개는 열렸다, 전사. 다만 이제부터 이 나루의 법은 우리가 정한다.」'],choices:[{t:'나루로 돌아간다',go:'reed'}]};};
+SC.mediate=()=>({place:'갈대나루 · 여관 2층',title:'한 탁자의 적들',art:'river',npc:'sera',text:['모르간과 여우 칼이 탁자 양 끝에 앉는다. 나흘 밤낮 고함이 오간 끝에, 세라가 직접 계단을 올라온다.','세라 「말로는 안 끝나. 내 투사와 겨뤄. 네가 이기면 조합이 물값을 절반으로 내리는 조건으로 고개를 열지. 지면 꺼져.」','모르간이 마지못해 고개를 끄덕인다.'],
+  choices:[{t:'투사와 겨룬다',sub:'목숨을 건 싸움은 아니다',fn:()=>{fight('champion',{art:'river',noflee:true,intro:'세라의 투사가 목검 대신 진검을 든다. 「피는 조금 볼 거야.」',win:'medWin',lose:'medLose'});}}]});
+SC.medWin=()=>{const f=S.f;if(!f.reed){f.reed='peace';f.road=true;S.karma+=2;S.gold+=120;NOTE='모르간이 사례로 금화 120닢을 건넸다. 쇠울 폐광이 지도에 표시되었다.';}
+  return{place:'갈대나루',title:'불안한 휴전',art:'river',npc:'sera',text:['투사가 칼을 내려놓고 웃는다. 세라가 탁자를 손바닥으로 내리친다.','세라 「좋아. 고개는 연다. 대신 늑대단이 고개 초소를 지킨다. 통행세는 조합이 아니라 우리가 받는다.」','모르간 「...물값 절반. 좋소.」'],choices:[{t:'나루로 돌아간다',go:'reed'}]};};
+SC.medLose=()=>{S.f.medFail=true;S.hp=Math.max(S.hp,6);return{place:'갈대나루 · 여관',title:'깨진 협상',art:'river',npc:'vera',text:['눈을 뜨니 여관 침대 위다. 갈비뼈가 욱신거린다.','베라 「협상은 깨졌어. 모르간은 문을 쾅 닫고 나갔고, 세라는 웃으면서 떠났지. 이제 어느 한쪽을 고를 수밖에 없겠어.」'],choices:[{t:'일어난다',go:'reed'}]};};
+SC.market=()=>{const f=S.f,b=f.reed==='bandit',cp=b?200:120,m=f.reed==='peace'?.8:1,$p=v=>Math.round(v*m);
+  return{place:'갈대나루 · 시장',title:'강변 시장',art:'river',text:['생선 비린내와 향신료 냄새. 물통 장수의 좌판 앞에서 사람들이 값을 깎고 있다.',b?'모든 좌판 앞에 붉은 두건이 서서 통행세를 걷는다. 값이 비싸다.':'',m<1?'휴전을 맺게 한 전사라며 상인들이 값을 깎아 준다. (2할 할인)':'',!f.dog?'부두 끝에서 갈색 털의 떠돌이 개 한 마리가 생선 좌판을 노려보고 있다.':'',S.act===1&&!f.caravan?`물 장수 「돌샘? 거기까지 물 수레를 보내 줄 수는 있지. ${cp}금이면.」`:''],
+    choices:[...shop([potion(b?18:$p(12)),weapon('bastard',$p(160)),armor('plate',$p(180))]),
+      {t:'떠돌이 개에게 생선을 사 준다 — 3금',if:()=>!f.dog,need:()=>S.gold>=3,why:'금화가 모자란다',fn:()=>{S.gold-=3;return'dogMeet';}},
+      {t:`돌샘으로 물 수레를 보낸다 — ${cp}금`,sub:'돌샘의 물 +35일',if:()=>S.act===1&&!f.caravan,need:()=>S.gold>=cp,why:'금화가 모자란다',fn:()=>{S.gold-=cp;S.water+=35;f.caravan=true;S.karma+=1;NOTE='물 수레가 돌샘으로 떠났다. 버틸 수 있는 날이 35일 늘었다.';return'market';}},
+      {t:'시장을 나선다',go:'reed'}]};};
+
+/* 붉은숲 */
+SC.forest=()=>{const f=S.f;
+  if(f.reed==='bandit')return{place:'붉은숲',title:'늑대단 야영지',art:'forest',npc:'sera',save:true,text:['모닥불 곁에서 세라가 손을 든다. 늑대단은 당신을 동료로 대한다.','세라 「여기선 공짜로 쉬어 가. 우리 식구니까.」'],choices:[rest(0),leave]};
+  if(f.reed==='guild')return{place:'붉은숲',title:'불탄 목책',art:'forest',save:true,text:['불탄 천막과 무너진 목책만 남았다. 까마귀가 운다.'],choices:[leave]};
+  if(f.reed==='peace')return{place:'붉은숲',title:'빈 야영지',art:'forest',save:true,text:['늑대단은 고개 초소로 옮겨 갔다. 빈 야영지에 모닥불 자국만 남았다.'],choices:[rest(0),leave]};
+  return{place:'붉은숲',title:'붉은 목책',art:'forest',npc:'bandit',save:true,text:['나무 사이로 붉은 천을 단 목책이 보인다. 파수꾼이 활시위를 당긴다.','파수꾼 「거기 서! 조합 개냐? 한 발짝만 더 오면 목에 구멍 난다.」'],
+    choices:[{t:'검을 뽑는다',sub:f.quest==='guild'?'조합의 의뢰를 수행한다':'조합 의뢰 없이 힘으로 뚫는다',if:()=>f.quest!=='bandit',fn:()=>{f.quest='guild';fight('bandit',{intro:'파수꾼이 활을 버리고 도끼를 든다!',win:()=>{fight('bandit',{intro:'목책 뒤에서 두 번째 약탈자가 뛰쳐나온다!',win:'seraMeet'});}});}},
+      {t:'물러난다',go:'map'}]};};
+SC.seraMeet=()=>({place:'붉은숲 · 목책 안',title:'두목 세라',art:'forest',npc:'sera',text:['목책 안쪽, 붉은 머리의 여자가 쌍검을 뽑는다.','세라 「모르간이 보냈나. 그 돼지가 물값으로 몇 마을을 말려 죽였는지는 알고 왔겠지? ...상관없나. 덤벼.」'],
+  choices:[{t:'싸운다',fn:()=>{fight('sera',{intro:'세라의 쌍검이 바람을 가른다.',win:'seraDown'});}}]});
+SC.seraDown=()=>({place:'붉은숲',title:'꺾인 늑대',art:'forest',npc:'sera',text:['세라가 무릎을 꿇는다. 피 묻은 쌍검이 흙 위에 구른다.','세라 「...베. 어차피 조합 밑에서 사느니.」'],
+  choices:[{t:'목을 벤다',sub:'현상금의 증거가 된다',fn:()=>{const f=S.f;f.reed='guild';f.road=true;S.karma-=1;NOTE='쇠울 폐광이 지도에 표시되었다. 조합 회관에서 보상을 받을 수 있다.';return'seraEnd';}},
+    {t:'살려 보낸다',sub:'다시는 이 고개에 오지 마라',fn:()=>{const f=S.f;f.reed='guild';f.road=true;f.seraSpared=true;S.karma+=1;NOTE='쇠울 폐광이 지도에 표시되었다.';return'seraEnd';}}]});
+SC.seraEnd=()=>({place:'붉은숲',title:'열린 고개',art:'forest',text:[S.f.seraSpared?'세라는 말없이 숲 남쪽으로 사라진다. 남은 늑대단도 그 뒤를 따른다.':'늑대단은 두목을 잃고 흩어졌다. 붉은 깃발이 모닥불 속에서 탄다.','북쪽 고개로 가는 길이 열렸다. 쇠울까지는 며칠 길이다.'],choices:[{t:'지도를 펼친다',go:'map'}]});
+
+/* 쇠울 */
+SC.mine=()=>{const f=S.f,t=[],ch=[];
+  if(f.mine==='doomed'){t.push('갱도 입구는 무너진 돌로 막혀 있다. 램프는 꺼졌고, 아무도 나오지 않는다.');}
+  else if(f.mine==='saved'){t.push('갱도에서 망치 소리가 울린다. 흙사람들이 당신에게 고개를 숙인다. 펌프가 고르게 숨을 쉰다.');ch.push(rest(0));}
+  else if(f.mine==='traded'){t.push('빈 갱도에 바람 소리만 들린다. 흙사람들은 남쪽 갈대나루로 떠났다.');}
+  else{t.push(f.metBrick?'램프 불빛 아래 흙사람 경비들이 당신을 지켜본다.':'고개를 넘자 산허리에 뚫린 거대한 갱도 입구가 나타난다. 램프 불빛 아래 선 경비들의 피부가 수정 가루로 잿빛으로 반짝인다. 흙사람들이다.');
+    ch.push({t:f.metBrick?'브릭과 다시 이야기한다':'경비에게 다가간다',go:'brick'});
+    ch.push({t:'펌프실로 내려간다',if:()=>f.metBrick,fn:()=>{fight('spider',{art:'cave',intro:'어두운 갱도 천장에서 거미가 떨어져 내린다!',win:'pump'});}});}
+  ch.push(leave);
+  return{place:'쇠울 폐광',title:'흙사람들의 광산',art:'mine',save:true,text:t,choices:ch};};
+SC.brick=()=>{S.f.metBrick=true;return{place:'쇠울 · 갱도 입구',title:'흙사람 브릭',art:'mine',npc:'miner',text:[
+  '흙사람의 우두머리 브릭은 손가락 마디마다 작은 수정이 돋아 있다.',
+  '브릭 「샘의 심장을 찾는다고? 하. 우리 펌프를 돌리는 게 바로 그거다. 쉰 해 전 너희 마을 같은 곳에서 사 온 마지막 수정이지. 그걸 빼면 쇠울의 물은 사흘 안에 멈춘다.」',
+  '브릭 「깊은 광맥엔 아직 원석이 남아 있을지도 모른다. 하지만 거긴 수정 골렘이 지키고 있어. 우리 광부 열이 내려가 하나도 못 돌아왔지.」',
+  '브릭 「요즘엔 잿빛 병사들까지 내려와 광부들을 끌고 북동쪽 검은탑으로 간다. 우리 끝도 멀지 않았어.」'],choices:[{t:'갱도 입구로 돌아간다',go:'mine'}]};};
+SC.pump=()=>({place:'쇠울 · 펌프실',title:'고동치는 수정',art:'pump',npc:'miner',text:[
+  '갱도 맨 아래, 거대한 청동 펌프 한가운데에서 푸른 수정이 고동친다. 당신이 찾던 바로 그것이다.',
+  '파이프를 따라 맑은 물이 위쪽 마을로 올라간다. 브릭이 팔짱을 끼고 말없이 당신을 지켜본다.',
+  `돌샘의 물이 버틸 날: ${remain()}일.`],
+  choices:[
+    {t:'펌프의 심장을 뽑아 간다',sub:'빠르다. 쇠울은 물을 잃는다',fn:()=>{fight('minerguard',{art:'pump',mul:1.2,noflee:true,intro:'브릭 「역시 그럴 줄 알았다.」 경비가 곡괭이를 치켜든다!',win:'heartTaken'});}},
+    {t:'깊은 광맥으로 내려가 원석을 캔다',sub:'약 6일 · 수정 골렘이 지킨다',fn:()=>{const x=tick(6);if(x)return x;fight('cspider',{art:'cave',intro:'광맥으로 가는 좁은 굴. 벽의 수정이 움직인다. 수정 거미다!',win:()=>{fight('golem',{art:'cave',intro:'굴 끝의 수정 더미가 몸을 일으킨다. 골렘의 눈이 노랗게 빛난다.',win:'veinWin'});}});}},
+    {t:'브릭과 거래한다',sub:'금화 120으로 쇠울 사람들의 이주를 돕는다',need:()=>S.gold>=120,why:'금화가 모자란다 (120 필요)',fn:()=>{S.gold-=120;S.pot+=2;NOTE='브릭이 답례로 흙사람의 물약 두 병을 건넸다.';return'tradeDone';}},
+    {t:'일단 물러난다',go:'mine'}]});
+SC.heartTaken=()=>{const f=S.f;f.crystal=true;f.gem='old';f.mine='doomed';S.karma-=2;
+  return{place:'쇠울 · 펌프실',title:'멎은 펌프',art:'pump',text:['수정을 뽑아내자 펌프가 쇳소리를 내며 멎는다. 파이프 속 물소리가 잦아든다.','등 뒤에서 브릭의 목소리가 갱도를 울린다.','브릭 「너희 마을이 살면, 우리가 죽는다. 그걸 알고 가는 거지.」','당신은 대답하지 않는다.'],choices:[{t:'갱도를 빠져나간다',fn:()=>{S.loc='mine';return'map';}}]};};
+SC.veinWin=()=>{const f=S.f;if(!f.crystal){f.crystal=true;f.gem='raw';f.mine='saved';f.map=true;S.karma+=2;S.pot+=2;NOTE='샘의 심장(원석)과 지하 지도, 물약 2병을 얻었다.';}
+  return{place:'쇠울 · 깊은 광맥',title:'새 심장',art:'cave',npc:'miner',text:['골렘이 무너지자 그 가슴에서 주먹만 한 원석이 굴러 나온다. 오래된 심장보다 더 맑다.','브릭이 갱도 입구까지 당신을 배웅한다.','브릭 「흙사람은 빚을 잊지 않는다. 이걸 가져가. 옛 광부들이 그린 지하 지도다. 동쪽 수도원 아래까지 이어진 묘지 길이 그려져 있지. 언젠가 쓸모가 있을 거다.」'],choices:[{t:'길을 나선다',fn:()=>{S.loc='mine';return'map';}}]};};
+SC.tradeDone=()=>{const f=S.f;f.crystal=true;f.gem='old';f.mine='traded';S.karma+=1;
+  return{place:'쇠울 · 펌프실',title:'떠나는 사람들',art:'pump',npc:'miner',text:['브릭은 금화 주머니를 오래 내려다보다가 펌프의 밸브를 잠근다.','브릭 「갈대나루라... 햇빛 아래서 사는 것도 나쁘지 않겠지. 아이들은 해를 본 적이 없으니까.」','흙사람들이 짐을 꾸리기 시작한다. 브릭이 직접 수정을 뽑아 당신 손에 쥐여 준다.'],choices:[{t:'길을 나선다',fn:()=>{S.loc='mine';return'map';}}]};};
+
+/* 회색 수도원 */
+SC.mon=()=>{const f=S.f;
+  if(f.king)return{place:'회색 수도원',title:'무너진 종탑',art:'monastery',save:true,text:['수도원은 무너진 돌무더기가 되었다. 재는 여전히 눈처럼 내린다.'],choices:[leave]};
+  return{place:'회색 수도원',title:'재가 내리는 곳',art:'monastery',save:true,text:['잿빛 재가 눈처럼 내린다. 종탑 아래로 순례자 행렬이 천천히 문을 지난다.','문지기 사제가 그릇에 담긴 재를 순례자들 혀 위에 하나씩 올려 준다. 순례자들의 눈빛이 하나둘 흐려진다.'],
+    choices:[
+      {t:'정문을 돌파한다',sub:'연달아 싸워야 한다',fn:()=>{fight('ash',{intro:'문지기 옆의 잿빛 병사가 창을 겨눈다!',win:()=>{fight('priest',{mul:S.f.priestHint?.7:1,intro:S.f.priestHint?'회색 사제가 재를 쥔 손을 든다. 숨을 들이켜는 그 순간, 빈틈이 보인다!':'회색 사제가 재를 한 줌 쥐고 주문을 왼다!',win:'hall'});}});}},
+      {t:'순례자 행렬에 섞여 세례를 받는다',sub:'싸움 없이 들어간다 · 최대 체력이 영구히 줄어든다',fn:()=>{S.f.ash=true;S.maxHp-=10;S.hp=Math.min(S.hp,S.maxHp);return'baptism';}},
+      {t:'지하 묘지 길로 숨어든다',sub:'왕의 허를 찌를 수 있다',need:()=>f.map,why:'수도원 아래 길을 알 방법이 없다',go:'crypt'},
+      leave]};};
+SC.baptism=()=>({place:'회색 수도원 · 정문',title:'재의 세례',art:'monastery',npc:'priest',text:['사제가 당신 혀 위에 재를 올린다. 쓴맛. 핏줄을 따라 차가운 것이 번진다. (최대 체력 -10)','사제 「이제 너는 목마르지 않으리라.」','손끝이 잠시 잿빛으로 물들었다가 돌아온다. 사제는 의심 없이 당신을 안으로 들인다.'],choices:[{t:'회랑을 따라 안쪽으로',go:'hall'}]});
+SC.crypt=()=>({place:'회색 수도원 · 지하 묘지',title:'마른 수로',art:'crypt',text:['브릭의 지도가 가리키는 마른 수로를 따라가자 무너진 묘지가 나온다. 벽감마다 해골이 줄지어 있다.','발밑에서 무언가 우르르 몰려온다.'],
+  choices:[{t:'검을 뽑는다',fn:()=>{fight('rats',{art:'crypt',intro:'수백 개의 붉은 눈이 어둠 속에서 번뜩인다!',win:()=>{S.f.sneak=true;return'cryptEnd';}});}}]});
+SC.cryptEnd=()=>({place:'회색 수도원 · 지하 묘지',title:'휘장 뒤',art:'crypt',text:['묘지 끝 계단을 오르자 왕좌의 방 뒤편 휘장이 보인다.','왕은 화로를 향해 등을 돌리고 있다. 아직 당신을 보지 못했다.'],choices:[{t:'휘장을 걷는다',go:'hall'}]});
+SC.hall=()=>({place:'회색 수도원 · 왕좌의 방',title:'이름 없는 왕',art:'hall',npc:'king',text:[
+  S.f.sneak?'당신이 휘장을 걷자 왕이 천천히 돌아본다. 놀란 기색은 없다. 그러나 그의 몸은 아직 화로의 불을 다 끌어 모으지 못했다.':'거대한 재의 화로 앞에 마른 노인이 앉아 있다. 머리에 쓴 관은 수정으로 엮였다.',
+  '왕 「돌샘에서 왔군. 냄새로 안다. 물 냄새.」',
+  '왕 「나는 한때 쇠울의 수정술사였다. 우물 하나가 마르면 마을 하나가 죽는 걸 수없이 봤지. 그래서 만들었다. 목마르지 않고, 늙지 않고, 병들지 않는 사람들을.」',
+  '왕 「네 마을도 곧 그렇게 될 것이다. 우물이 필요 없는 마을로. 무릎을 꿇어라. 너 같은 전사라면 내 군단의 장군이 될 수 있다.」'],
+  choices:[
+    {t:'검을 뽑는다',fn:()=>{fight('king',{art:'hall',mul:S.f.sneak?.75:1,intro:'왕 「그렇다면 너도 재가 되어라.」',win:'kingSlain'});}},
+    {t:'검은탑의 기록을 내민다',sub:'그가 만든 것의 진실',need:()=>S.f.record,why:'그를 흔들 증거가 없다',go:'kingPersuaded'},
+    {t:'무릎을 꿇는다',sub:'목마르지 않는 세상',fn:()=>'E_join'}]});
+SC.kingSlain=()=>{const f=S.f;f.king='slain';
+  return{place:'회색 수도원',title:'꺼져 가는 화로',art:'hall',text:['왕이 쓰러지자 화로의 불길이 색을 잃고 요동친다. 천장에서 돌이 떨어진다.','당신은 무너지는 회랑을 달려 빠져나온다. 등 뒤에서 종탑이 주저앉는 소리가 들린다.',f.tower?'이제 돌샘으로 돌아갈 때다.':'왕은 죽었다. 그러나 검은탑의 화로는 아직 타고 있다.'],choices:[{t:'수도원을 벗어난다',go:'mon'}]};};
+SC.kingPersuaded=()=>{const f=S.f;f.king='persuaded';S.karma+=2;
+  return{place:'회색 수도원',title:'세르딘',art:'hall',npc:'king',text:[
+    '왕은 장부를 오래 읽는다. 마른 손이 떨린다.',
+    '왕 「아이를... 갖지 못한다고. 이름을 잊는다고. 나는 목마르지 않는 사람을 만든 게 아니라, 목마르지 않는 묘비를 만든 거로군.」',
+    '그는 당신에게 나가라고 손짓한다.',
+    '왕 「내 이름은 세르딘이었다. 누군가는 기억해 다오.」',
+    '등 뒤에서 화로가 하얗게 타오른다. 수도원을 벗어나 돌아보았을 때, 종탑은 이미 불기둥이 되어 있었다.'],choices:[{t:'수도원을 벗어난다',go:'mon'}]};};
+
+/* 검은탑 */
+SC.tower=()=>{const f=S.f;
+  if(f.tower)return{place:'검은탑',title:'식은 탑',art:'tower',save:true,text:['탑은 꺼진 화덕처럼 식어 있다. 우리 문은 모두 열려 있다.'],choices:[leave]};
+  return{place:'검은탑',title:'쇳물 냄새',art:'tower',save:true,text:['붉은 하늘 아래 쇳물과 재 냄새가 진동한다. 탑 아래 우리마다 끌려온 사람들이 웅크려 있고, 잿빛 병사들이 줄지어 탑을 드나든다.',f.king?'왕이 죽은 뒤로 병사들의 걸음이 어딘가 어긋나 있다. 누구의 명령을 기다리는 듯하다.':''],
+    choices:[{t:'탑으로 쳐들어간다',fn:()=>{fight('ash',{intro:'탑 문을 지키던 잿빛 병사가 돌아선다!',win:()=>{fight('ash',{mul:1.15,intro:'계단 위에서 또 다른 병사가 내려온다!',win:()=>{S.f.record=true;return'forge';}});}});}},leave]};};
+SC.forge=()=>({place:'검은탑 · 심장부',title:'재의 성배',art:'forge',text:[
+  '탑의 심장부. 사람 키 세 배쯤 되는 재의 성배가 붉게 끓는다. 성배 옆 책상에서 당신은 가죽 장부를 집어 든다.',
+  '§재생 3년째. 첫 세대는 제 이름을 잊었다. 재생자 사이에서 아이는 단 하나도 태어나지 않았다. 군단은 늘지만, 군단은 끝난다. 이 사실을 왕께 아뢸 자가 없다.',
+  '그때 쇠 가면을 쓴 거한이 도끼를 끌며 다가온다.',
+  '쇠가면 「왕의 화로에 손대지 마라.」'],
+  choices:[
+    {t:'성배를 부순다',sub:'쇠가면을 쓰러뜨려야 한다',fn:()=>{fight('ironmask',{art:'forge',intro:'쇠가면 「왕의 이름으로!」',win:'towerDestroyed'});}},
+    {t:'왕이 죽었음을 알린다',sub:'싸우지 않고 군단을 돌려세운다',need:()=>!!S.f.king,why:'왕이 살아 있는 한 그는 듣지 않을 것이다',go:'towerExodus'},
+    {t:'우리의 포로부터 풀어 준다',sub:'약 5일 · 더 거센 싸움',fn:()=>{const x=tick(5);if(x)return x;fight('ash',{art:'tower',mul:1.2,intro:'우리 자물쇠를 부수자 경비병이 달려든다!',win:()=>{fight('ironmask',{art:'tower',mul:1.1,intro:'포로들의 비명 사이로 쇠가면이 성큼성큼 다가온다.',win:'towerFreed'});}});}}]});
+SC.towerDestroyed=()=>{S.f.tower='destroyed';return{place:'검은탑',title:'식어 가는 재',art:'forge',text:['쇠가면이 쓰러지고, 당신의 검이 성배의 이음새를 끊는다. 끓던 재가 바닥으로 쏟아지며 식는다.','탑 아래 병사들이 하나둘 멈춰 선다. 실이 끊긴 인형처럼.','장부는 품 안에 넣었다. 언젠가 쓸모가 있을지도 모른다.'],choices:[{t:'탑을 나선다',go:'tower'}]};};
+SC.towerFreed=()=>{S.f.tower='freed';S.karma+=2;return{place:'검은탑',title:'열린 우리',art:'tower',text:['쇠가면을 쓰러뜨린 뒤 성배를 엎는다. 우리 문이 하나씩 열린다. 마른 얼굴들이 붉은 하늘을 올려다본다.','손등에 수정이 돋은 사내가 당신 손을 붙잡는다.','사내 「쇠울... 쇠울로 돌아가겠소. 당신 이름을 말해 주시오.」',`당신은 대답한다. "${S.name}."`],choices:[{t:'탑을 나선다',go:'tower'}]};};
+SC.towerExodus=()=>{S.f.tower='exodus';S.karma+=1;return{place:'검은탑 · 심장부',title:'가면 아래',art:'forge',npc:'ironmask',text:[
+  '쇠가면 「왕이... 죽었다고.」',
+  '그가 가면을 벗는다. 그 아래 얼굴은 잿빛이지만 아직 사람의 눈을 하고 있다.',
+  '쇠가면 「나는 쇠울의 광부였다. 이름은... 기억나지 않는군.」',
+  S.f.mine==='saved'?'쇠가면 「쇠울이 다시 숨을 쉰다고? ...그렇다면 됐다.」':'',
+  '쇠가면 「군단을 북쪽 얼음 땅으로 데려가겠다. 거기엔 목마를 일도, 지킬 우물도 없으니.」'],choices:[{t:'탑을 나선다',go:'tower'}]};};
+
+SC.trait=()=>({place:'돌샘마을',title:'어떤 전사였는가',art:'title',text:[`${S.name}. 돌샘에서 칼을 쥘 줄 아는 단 한 사람. 마을을 떠나기 전, 당신은 어떤 길을 걸어왔는가?`],
+  choices:[
+    {t:'용병 출신',sub:'공격력 +2 · 대신 번 돈은 다 써 버려 시작 금화 10',fn:()=>{S.trait='merc';S.gold=10;return'intro';}},
+    {t:'방패병',sub:'방어 +1 · 최대 체력 +8',fn:()=>{S.trait='shield';S.maxHp+=8;S.hp=S.maxHp;return'intro';}},
+    {t:'길잡이',sub:'이동 일수 20% 단축 · 길 위의 습격을 덜 만난다',fn:()=>{S.trait='scout';return'intro';}}]});
+SC.dogMeet=()=>{S.f.dog=true;return{place:'갈대나루 · 부두',title:'잿불',art:'river',npc:'dog',text:['생선을 던져 주자 개는 순식간에 먹어 치우고, 당신 발치에 앉아 꼬리를 친다. 털 끝이 불에 그을린 듯 검다.','베라 「그 녀석, 동쪽 마을이 불탄 뒤로 혼자 떠돌아왔어. 너를 따라가겠다는 눈치인데.」','당신은 개를 잿불이라 부르기로 한다. (동료: 전투에서 매 턴 적을 문다)'],choices:[{t:'시장으로 돌아간다',go:'market'}]};};
+SC.board=()=>{const a1=S.act===1;return{place:'갈대나루 · 게시판',title:'현상금 게시판',art:'river',text:['나루 광장 기둥에 젖은 종이가 덕지덕지 붙어 있다.',a1?'§들개 무리 소탕. 남쪽 둑길에서 짐꾼 둘이 물렸음. 보상 금화 40 — 조합 회관':'§잿빛 낙오병 처치. 강 건너 방앗간에 한 놈이 숨어 있음. 보상 금화 60 — 나루 자경단'],
+  choices:[{t:a1?'들개 사냥에 나선다':'낙오병을 처치하러 간다',sub:'2일 걸림 · 반복 가능',fn:()=>{const x=tick(2);if(x)return x;fight(a1?'wolf':'ash',{art:'road',mul:a1?1.4:1.1,intro:a1?'둑길 갈대숲에서 들개들이 이빨을 드러낸다!':'방앗간 그늘에서 잿빛 병사가 일어선다!',win:()=>{const g_=a1?40:60;S.gold+=g_;NOTE=`현상금 ${g_}금을 받았다.`;return'reed';}});}},
+    {t:'광장으로 돌아간다',go:'reed'}]};};
+const EVENTS={
+  cart:{act:0,d:()=>({title:'버려진 수레',art:'road',text:['길가에 바퀴 빠진 수레가 기울어 있다. 말은 없고, 짐칸 덮개가 바람에 펄럭인다.'],
+    choices:[{t:'짐칸을 뒤진다',fn:()=>{if(chance(.5)){S.pot++;NOTE='물약 한 병을 찾았다.';}else{const v=rnd(15,30);S.gold+=v;NOTE=`금화 ${v}닢을 찾았다.`;}return LOCS[S.loc].hub;}},{t:'지나친다',fn:()=>LOCS[S.loc].hub}]})},
+  pilgrims:{act:0,d:()=>({title:'목마른 가족',art:'road',text:['빈 물통을 흔드는 가족이 길을 막는다. 아이 입술이 하얗게 텄다.','아버지 「물이든 약이든... 뭐라도 좋습니다. 갈대나루까지만 버티면 돼요.」'],
+    choices:[{t:'물약을 나눠 준다',need:()=>S.pot>0,why:'물약이 없다',fn:()=>{S.pot--;S.karma+=1;NOTE='가족이 몇 번이고 고개를 숙인다.';return LOCS[S.loc].hub;}},{t:'금화 10닢을 쥐여 준다',need:()=>S.gold>=10,why:'금화가 모자란다',fn:()=>{S.gold-=10;S.karma+=1;NOTE='아이가 당신 소매를 오래 붙잡는다.';return LOCS[S.loc].hub;}},{t:'갈 길이 바쁘다',fn:()=>LOCS[S.loc].hub}]})},
+  peddler:{act:0,d:()=>({title:'떠돌이 행상',art:'road',text:['노새에 짐을 산더미처럼 실은 행상이 손을 흔든다.','행상 「길 위에서 파는 물건은 싸지. 물약 두 병에 스무 닢!」'],
+    choices:[{t:'물약 두 병을 산다 — 20금',need:()=>S.gold>=20,why:'금화가 모자란다',fn:()=>{S.gold-=20;S.pot+=2;NOTE='물약 두 병을 샀다.';return LOCS[S.loc].hub;}},{t:'지나친다',fn:()=>LOCS[S.loc].hub}]})},
+  scout:{act:2,d:()=>({title:'쓰러진 정찰병',art:'road',text:['덤불 속에 돌샘의 정찰병 미르가 쓰러져 있다. 어깨에 잿빛 화살이 박혔다.','미르 「군단이... 계곡 길로 우회하고 있어요. 돌샘에 알려야 하는데...」'],
+    choices:[{t:'상처를 돌보고 마을로 보낸다',sub:'1일 걸림 · 돌샘이 대비할 시간을 번다',fn:()=>{S.day+=1;S.inv+=5;S.karma+=1;NOTE='미르가 경고를 전했다. 돌샘이 목책을 보강해 침공까지 5일을 벌었다.';return LOCS[S.loc].hub;}},{t:'그냥 지나친다',fn:()=>LOCS[S.loc].hub}]})},
+  deserter:{act:2,d:()=>({title:'재를 토하는 순례자',art:'road',text:['회색 로브의 순례자가 길가에 엎드려 잿빛 물을 토한다.','순례자 「세례를... 다 삼키지 못했어요. 그래서 도망칠 수 있었죠. 사제들은 재를 쥔 손을 들 때마다 숨을 들이켜요. 그 순간이 빈틈이에요.」'],
+    choices:[{t:'물약을 주고 돌샘으로 가라 이른다',need:()=>S.pot>0,why:'물약이 없다',fn:()=>{S.pot--;S.karma+=1;S.f.priestHint=true;NOTE='회색 사제의 빈틈을 알았다. (회색 사제가 약해진다)';return LOCS[S.loc].hub;}},{t:'이야기만 듣고 떠난다',fn:()=>{S.f.priestHint=true;NOTE='회색 사제의 빈틈을 알았다. (회색 사제가 약해진다)';return LOCS[S.loc].hub;}}]})}
+};
+SC.event=()=>{const d=EVENTS[S.ev].d();return Object.assign({place:'길 위에서'},d);};
+SC.dead=()=>({place:'',title:'쓰러진 전사',art:'end',text:[`${S.name}의 시야가 어두워진다. 돌샘의 우물 소리가 아득하게 멀어진다.`],
+  choices:[{t:'마지막 기록에서 다시',if:hasSave,fn:()=>{loadGame();}},{t:'처음부터',fn:()=>{title();}}]});
+
+/* ---------- 엔딩 ---------- */
+function buildEnding(k){if(k.startsWith('d1'))return buildD1(k);const f=S.f,n=S.name;
+  if(k==='drought')return[{art:'dry',title:'마른 우물',text:['약속한 날이 다 가기 전, 돌샘의 우물은 붉은 흙탕물만 토해 냈다.','사람들은 짐을 꾸려 흩어졌다. 몇몇은 갈대나루에 닿았고, 몇몇은 닿지 못했다.',`${j(n,'이','가')} 수정을 손에 넣었는지는 아무도 몰랐다. 마을에는 그 소식을 기다릴 사람이 남아 있지 않았으니까.`],end:'끝 · 마른 우물'}];
+  if(k==='invasion')return[{art:'village_ash',title:'재가 내린 마을',text:['예순다섯째 날 밤, 잿빛 군단이 돌샘의 목책을 넘었다.','저항은 짧았다. 이튿날 아침 우물가에는 아무도 없었고, 동쪽으로 끌려가는 긴 행렬만 있었다.','맑아진 우물물은 그 뒤로도 오래, 마실 사람 없이 고여 있었다.'],end:'끝 · 재가 내린 마을'}];
+  if(k==='join')return[
+    {art:'hall',npc:'king',title:'무릎 꿇은 전사',text:['당신은 무릎을 꿇는다. 왕이 손수 재 한 줌을 당신 혀 위에 올린다.','쓴맛이 사라지자, 목마름도 함께 사라졌다. 두려움도, 그리움도.']},
+    {art:'village_ash',title:'잿빛 장군',text:['예순다섯째 날 밤, 잿빛 군단의 선두에서 낯익은 얼굴이 돌샘의 목책을 넘었다.','장로 하란은 당신의 이름을 불렀다. 당신은 그 이름이 누구의 것인지 기억나지 않았다.','돌샘은 목마르지 않는 마을이 되었다. 아이는 다시 태어나지 않았다.'],end:'끝 · 잿빛 장군'}];
+  const s=[];
+  s.push({art:'village',place:'돌샘마을',title:'우물',text:[
+    k==='exile'?'당신이 떠난 뒤 돌샘의 우물은 다시 맑아졌다. 아이들은 나무칼을 내려놓았고, 몇 해가 지나자 이름 모를 전사의 노래를 불렀다.':
+    k==='sword'?'그날 밤 하란은 장로 자리에서 물러났다. 돌샘은 당신을 두려워하며 받들었다. 목책은 높아졌고 웃음은 낮아졌다.':
+    '당신을 따라 열두 명이 돌샘을 떠났다. 하란은 마을 문에 서서 오래 손을 흔들었다.',
+    f.gem==='raw'?'쇠울의 원석은 삼백 년을 더 빛날 것이라고 사람들은 말했다.':'쇠울에서 가져온 낡은 수정은 하란의 손자 대에 이르러 다시 금이 갔다. 그러나 그때 돌샘에는 수정을 사 올 은화가 있었다.',
+    f.caravan?'가뭄 때 갈대나루에서 온 물 수레의 바퀴 하나가 지금도 우물가에 걸려 있다.':'']});
+  s.push({art:'river',place:'갈대나루',title:'나루',text:[
+    f.reed==='guild'?'조합은 고개를 지켰지만 값을 올렸다. 나루는 부유해졌고, 가난한 이들은 강 건너로 떠났다.'+(f.seraSpared?' 몇 해 뒤 남쪽 강에서 붉은 깃발이 다시 올랐다는 소문이 돌았다.':''):
+    f.reed==='bandit'?'늑대단이 나루를 차지했다. 곡식 창고는 열렸지만 칼이 법이 되었다. 십 년 뒤 사람들은 갈대나루를 도적의 항구라고 불렀다.':
+    '조합과 늑대단은 불안한 휴전을 지켰다. 세라는 고개 초소의 경비대장이 되었고, 모르간은 평생 처음으로 물값을 내렸다.',
+    f.mine==='traded'?'남쪽 부두 한편에 흙사람들의 마을이 생겼다. 그들의 아이들은 햇빛에 그을린 얼굴로 강에서 헤엄쳤다.':'']});
+  s.push({art:f.mine==='saved'?'mine':'cave',place:'쇠울',title:'광산',text:[
+    f.mine==='doomed'?'펌프가 멈춘 쇠울은 한 계절을 버티지 못했다. 브릭과 흙사람들은 어둠 속으로 흩어졌고, 갱도는 침묵했다.':
+    f.mine==='saved'?'깊은 광맥이 열리자 쇠울은 다시 숨을 쉬었다. 흙사람들은 맑은 수정을 캐 팔았고, 돌샘과 첫 교역로를 텄다.':
+    '흙사람들은 펌프 수정을 내주고 고향을 떠났다. 빈 갱도에는 지금도 바람이 드나든다.',
+    f.tower==='freed'?'검은탑에서 풀려난 광부 셋이 쇠울로 돌아와 그곳에 당신의 이름을 새겼다.':'']});
+  s.push({art:'tower',place:'검은탑',title:'군단',text:[
+    f.tower==='destroyed'?'성배가 식자 잿빛 군단은 주인을 잃고 황야로 흩어졌다. 그들은 몇 해 동안 길 위의 그림자로 남았다가, 하나둘 먼지가 되었다.':
+    f.tower==='freed'?'풀려난 포로들은 각자의 마을로 돌아가 검은탑의 이야기를 전했다. 탑은 무너지지 않았지만, 다시는 아무도 그 안에 끌려가지 않았다.':
+    '쇠가면은 남은 군단을 이끌고 북쪽 얼음 땅으로 떠났다. 다시는 남쪽으로 내려오지 않겠다는 약속을, 그는 끝까지 지켰다.']});
+  s.push({art:'monastery',place:'회색 수도원',title:'왕',text:[
+    f.king==='slain'?'이름 없는 왕은 당신의 검 아래 쓰러졌다. 재의 화로가 폭주하며 회색 수도원은 하룻밤 사이 무너졌다.':
+    '진실을 마주한 왕은 스스로 화로에 불을 넣었다. 그가 마지막으로 남긴 것은 군대도 관도 아닌, 세르딘이라는 옛 이름 하나였다.',
+    '재는 그 뒤로도 일 년 동안 동쪽 하늘에서 내렸다.']});
+  s.push({art:'end',place:n,title:k==='exile'?'방랑자':k==='sword'?'우물의 폭군':'새샘의 개척자',text:[
+    k==='exile'?'당신은 북쪽 고개 너머로 걸어갔다. 그 뒤의 이야기를 아는 사람은 없다. 다만 어느 먼 마을의 우물가에서, 낡은 검을 찬 나그네가 물 한 바가지를 얻어 마시고 떠났다는 이야기가 전해진다.':
+    k==='sword'?'당신은 돌샘의 주인이 되었다. 그러나 밤마다 우물가에서 손을 씻어도, 손등의 재는 씻겨 나가지 않았다.':
+    '남쪽 계곡에서 당신들은 새 샘을 팠다. 사람들은 그 마을을 새샘이라 불렀고, 첫 촌장은 우물 옆에 자신의 검을 묻었다.',
+    f.ash?'세례의 재는 당신의 피에 남아, 겨울마다 손끝이 잿빛으로 물들었다.':''],end:k==='exile'?'끝 · 방랑자':k==='sword'?'끝 · 우물의 폭군':'끝 · 새샘의 개척자'});
+  return s;}
+function ending(k){C=null;try{localStorage.removeItem(KEY);}catch(e){}const slides=buildEnding(k);let i=0;
+  const step=()=>{const s=slides[i],last=i===slides.length-1;show({art:s.art,npc:s.npc,place:s.place||'에필로그',title:s.title,text:s.text,choices:[]});
+    if(last){$('#txt').insertAdjacentHTML('beforeend',`<p class="summary">${s.end} — ${S.day}일째에 여정이 끝났다 · Lv ${S.lvl}</p>`);}
+    renderChoices(last?endChoices(k):[{t:'다음',fn:()=>{i++;step();}}]);};
+  step();}
+
+/* ---------- 타이틀 ---------- */
+function title(){S=null;C=null;CUR='title';world();draw('title');$('#labels').innerHTML='';$('#stat').hidden=true;$('#ebar').hidden=true;$('#log').hidden=true;
+  $('#place').textContent='중세 판타지 텍스트 RPG';$('#ttl').textContent='샘의 심장';
+  $('#txt').innerHTML=para(['마을의 우물을 살릴 수정을 찾아, 정해진 날 안에 돌아와야 한다. 길 위에서 내리는 선택이 나루와 광산과 마을의 운명을 바꾼다.','당신은 돌샘마을의 전사다.'])+`<div class="namebox"><label for="nm">전사의 이름</label><input id="nm" maxlength="8" value="레온" autocomplete="off"></div>`;
+  renderChoices([{t:'새 여정을 시작한다',fn:()=>{const v=($('#nm').value||'').replace(/[<>&"']/g,'').trim()||'레온';newGame(v);go('trait');}},{t:'이어서 한다',if:hasSave,fn:()=>{loadGame();}},{t:'DLC 1 · 흰모래항의 등불',sub:'본편 클리어 데이터로 시작한다',if:hasClear,fn:()=>{startD1FromClear();}}]);
+  status();}
+
+
+/* =====================================================================
+   DLC 1 · 흰모래항의 등불
+   ===================================================================== */
+const KEYC='saem-heart-clear-v1';
+Object.assign(W,{cutlass:{n:'해적 커틀러스',a:8},tide:{n:'조수의 대검',a:11}});
+Object.assign(A,{shark:{n:'상어가죽 갑옷',d:7},coral:{n:'산호 판금',d:9}});
+const ACC={pearl:{n:'진주 반지',d:'전투 시작 기력 3 · 방패 막기 때 기력 +2'},hook:{n:'갈고리 장갑',d:'강타 배율 1.8 → 2.2'},charm:{n:'소금 부적',d:'소금독에 걸리지 않는다 · 최대 체력 +10'}};
+Object.assign(EN,{
+  crab:{n:'바위게',hp:30,a:[6,9],def:4,xp:15,gold:0,spr:'crab'},
+  smuggler:{n:'밀수꾼',hp:34,a:[7,10],def:2,xp:18,gold:20,spr:'smuggler'},
+  saltghoul:{n:'소금 망령',hp:38,a:[7,11],def:3,xp:22,gold:0,spr:'saltghoul',salt:1},
+  gull:{n:'소금 갈매기떼',hp:30,a:[5,9],def:0,xp:15,gold:0,spr:'gull'},
+  overseer:{n:'감독관 그렌',hp:60,a:[9,12],def:4,xp:40,gold:60,spr:'overseer',boss:1,tele:3,teleMsg:'그렌이 쇠사슬 채찍을 머리 위로 크게 휘돌린다. 방패를 들어라!'},
+  brawler:{n:'짠물의 장사',hp:40,a:[6,9],def:2,xp:20,gold:0,spr:'brawler'},
+  blacktooth:{n:'흑치 선장',hp:95,a:[11,15],def:5,xp:70,gold:80,spr:'blacktooth',boss:1,scale:3,tele:3,teleMsg:'흑치가 두 자루 칼을 엇갈려 쥐고 몸을 낮춘다. 방패를 들어라!'},
+  drowned:{n:'익사자',hp:44,a:[9,12],def:3,xp:26,gold:0,spr:'drowned',salt:1},
+  giant:{n:'소금 거인',hp:125,a:[12,17],def:6,xp:100,gold:0,spr:'giant',boss:1,scale:3,tele:3,teleMsg:'거인의 몸에서 소금 결정이 솟아오르며 두 주먹이 들린다. 방패를 들어라!'},
+  merc:{n:'카스파의 용병',hp:46,a:[9,13],def:4,xp:28,gold:25,spr:'merc'},
+  kaspar:{n:'바론 카스파',hp:115,a:[12,16],def:5,xp:0,gold:0,spr:'kaspar',boss:1,scale:3,drain:1,salt:1,tele:4,teleMsg:'카스파의 왕관이 하얗게 타오른다. 바닥에서 소금 가시가 솟는다. 방패를 들어라!'}
+});
+SPR.crab=["..c........c..",".cc........cc.",".c..........c.","..c.rrrrrr.c..","...rrerrerr...","..rrrrrrrrrr..",".r.r.r..r.r.r.","r..r.r..r.r..r"];
+SPR.gull=["ww...ww.......","..w.w..ww...ww","...w.....w.w..","..........w...","..............","...ww...ww....",".....w.w......","......w......."];
+Object.assign(CH,{
+  crab:{s:'crab',p:{c:'#b5573a',r:'#8a4a3a',e:'#e2d7c0'}},
+  gull:{s:'gull',p:{w:'#cfc8b8'}},
+  isol:{s:'hum',p:{h:'#2a2a3a',c:'#3a5a7a',l:'#2a3448',w:'#d2ad66'}},
+  mia:{s:'hum',p:{h:'#6a4a3a',c:'#7a8a6a',w:'#8fab78'}},
+  aurel:{s:'hum',p:{h:'#d8d0c0',s:'#d8c8b0',c:'#c0b8a8',l:'#8a8478',w:'#e0b866'}},
+  osen:{s:'hum',p:{h:'#b8b2a2',c:'#4a5a6a',w:'#8a6e4b'}},
+  blacktooth:{s:'hum',p:{h:'#1d1a18',c:'#4a2a2a',e:'#e2d7c0',w:'#a8a8b0'}},
+  lina:{s:'hum',p:{h:'#c08a4a',c:'#8a6a8a',w:'#8a6a8a'}},
+  gondo:{s:'hum',p:{h:'#5a4a40',s:'#c09a7a',c:'#5a4a3a',w:'#c8bfa8'}},
+  smuggler:{s:'hum',p:{h:'#3a3a3a',c:'#4a4a3a'}},
+  overseer:{s:'hum',p:{h:'#5a4a2a',c:'#6a3a2a',w:'#6e5640'}},
+  worker:{s:'hum',p:{h:'#8a8070',s:'#d8d4cc',c:'#8a8070',w:'#a8a49a'}},
+  saltghoul:{s:'hum',p:{h:'#c8c2b2',s:'#e2ddd0',e:'#7fb3b5',c:'#a8a090',l:'#8a8478',w:'#c8c2b2'}},
+  drowned:{s:'hum',p:{h:'#2a4a4a',s:'#6a8a8a',e:'#d2ad66',c:'#3a5a5a',l:'#2a3a3a',w:'#5a7a7a'}},
+  merc:{s:'hum',p:{h:'#5a5a62',c:'#4a3a5a'}},
+  kaspar:{s:'hum',p:{h:'#e2ddd0',s:'#d8d0c0',e:'#7fd0c0',c:'#5a2a4a',l:'#3a1e30',w:'#d2ad66'}},
+  brawler:{s:'hum',p:{h:'#3b2e28',s:'#b98a6a',c:'#8a4a3a',w:'#b98a6a'}},
+  giant:{s:'golem',p:{r:'#c8c2b2',c:'#8cc0bc',e:'#3e5a60'}}
+});
+
+/* --- 지도 --- */
+const LOCS2={
+  port:{n:'흰모래항',x:30,y:30,hub:'d_port',art:'port'},
+  flats:{n:'소금벌',x:14,y:46,hub:'d_flats',art:'saltflat'},
+  manor:{n:'카스파 저택',x:16,y:10,hub:'d_manor',art:'manor'},
+  light:{n:'등대섬',x:56,y:42,hub:'d_light',art:'lighthouse'},
+  cove:{n:'검은돛 만',x:60,y:12,hub:'d_cove',art:'cove'},
+  temple:{n:'가라앉은 사원',x:84,y:26,hub:'d_temple',art:'temple'}
+};
+const ROADS2=[['port','flats'],['port','manor'],['port','light'],['port','cove'],['flats','manor'],['light','temple'],['cove','temple'],['light','cove'],['port','temple']];
+function world(){LOCS=S&&S.dlc?LOCS2:LOCS1;ROADS=S&&S.dlc?ROADS2:ROADS1;}
+function visibleD(k){const d=S.d;if(k==='port')return true;if(k==='temple')return!!d.way;return!!d.met;}
+function mapNodes(){
+  ROADS.forEach(([a,b])=>{if(!visible(a)||!visible(b))return;const A_=LOCS[a],B=LOCS[b];const n=Math.max(Math.abs(B.x-A_.x),Math.abs(B.y-A_.y));for(let t=0;t<=n;t+=2)P(A_.x+(B.x-A_.x)*t/n,A_.y+(B.y-A_.y)*t/n,1,1,'#7a6e54');});
+  Object.keys(LOCS).forEach(k=>{if(!visible(k))return;const L=LOCS[k];if(k===S.loc){P(L.x-3,L.y-3,7,7,'#e2d7c0');P(L.x-2,L.y-2,5,5,'#22303d');}P(L.x-1,L.y-1,3,3,(k==='manor'||k==='temple')?'#c46a5e':'#d2ad66');});}
+
+/* --- 도트 아트 --- */
+Object.assign(ART,{
+  seamap(){P(0,0,96,54,'#22303d');const r=rng(41);for(let i=0;i<80;i++)P(r()*96,r()*54,1,1,'#273848');
+    for(let y=0;y<54;y++){const c=Math.round(42+Math.sin(y*.22)*5-(y>28?9:0)+Math.sin(y*.7)*1.5);P(0,y,c,1,'#2a332f');P(c,y,1,1,'#4a5a52');}
+    for(let i=0;i<14;i++)circ(12+r()*8,44+r()*6,1,'#4e4c46');circ(56,42,3,'#2a332f');circ(61,8,6,'#2a332f');P(56,4,10,3,'#2a332f');
+    circ(84,26,3,'#2c4458');circ(84,26,1,'#22303d');if(S)mapNodes();},
+  port(){bands([['#3a4560',9],['#4b5470',8],['#69657a',6],['#8d7676',4],['#a8857a',3]]);
+    P(48,29,48,25,'#2e4a64');
+    for(let x=0;x<56;x++){const h=Math.round(18+x*.3+Math.sin(x*.3)*1.5);P(x,h,1,54-h,'#5a5048');}
+    [[2,26,9,6],[13,28,10,6],[25,30,9,5],[4,36,11,6],[17,37,9,5],[30,36,10,6],[38,32,8,5]].forEach(([x,y,w,h],i)=>house(x,y,w,h,'#b3aa98',i%2?'#7a4a3a':'#6a4038',i%3!==1));
+    P(0,45,60,9,'#5e564a');for(let x=0;x<60;x+=5)P(x,45,4,1,'#6e665a');P(50,40,30,2,'#6e5640');for(let x=52;x<80;x+=6)P(x,42,1,7,'#4f3d2e');},
+  beach(){bands([['#3e4c64',12],['#4e5a72',8],['#6a6a7c',6],['#8a7a7a',4]]);P(0,30,96,10,'#2e4a64');P(0,40,96,14,'#8a7a5e');const r=rng(43);for(let i=0;i<30;i++)P(r()*96,41+r()*13,1,1,'#7a6a50');
+    [[12,38,7],[70,37,9],[86,39,5]].forEach(([x,y,w])=>{P(x,y,w,3,'#4a4a52');P(x+1,y-1,w-2,1,'#5a5a64');});},
+  saltflat(){bands([['#566478',10],['#6c7488',8],['#8a8a94',7],['#a49a98',5]]);ridge(28,1,.1,'#6a6a70',44);P(0,32,96,22,'#b4b0a4');
+    const r=rng(45);for(let i=0;i<16;i++){let x=r()*96,y=34+r()*18;for(let k=0;k<6;k++){P(x,y,1,1,'#98948a');x+=r()*3-1;y+=r()*2-.5;}}
+    [[10,40,6],[22,36,4],[34,44,7],[52,38,5],[88,44,6]].forEach(([x,y,h])=>{tri(x,y-h,h,'#a8a498',1.1);tri(x-1,y-h,h,'#cfcabe',1.3);});
+    P(76,14,6,20,'#4a3a2a');P(74,12,10,2,'#5a4632');P(75,8,8,4,'#3e3024');P(76,10,1,1,'#d9b26a');for(let y=16;y<34;y+=4)P(76,y,6,1,'#3a2c20');},
+  lighthouse(){bands([['#161a26',12],['#1c2030',10],['#232838',8],['#2a3040',4]]);stars(rng(47),24,30);P(0,34,96,20,'#1e3448');
+    for(let x=36;x<86;x++){const h=Math.round(38-Math.sin((x-36)/50*Math.PI)*5+Math.sin(x*.9));P(x,h,1,48-h,'#33333c');}P(70,33,9,5,'#5a4a3a');tri(74,29,4,'#4a3530',1);P(72,34,2,2,S&&S.d&&S.d.lit?'#d9b26a':'#2a2420');
+    for(let y=8;y<38;y++){const w=Math.round(6+(y-8)*.14);P(60-w/2,y,w,1,(Math.floor(y/4)%2)?'#b8b0a0':'#8a4a3a');}
+    P(55,7,11,2,'#3a3a40');P(57,3,7,4,'#2a2a30');P(59,4,3,2,S&&S.d&&S.d.lit?'#f0d080':'#3a3030');tri(60,0,3,'#2a2a30',1);},
+  cove(){bands([['#1c2630',12],['#22303a',10],['#2a3a44',8]]);stars(rng(49),10,20);P(0,36,96,18,'#1e3448');
+    for(let x=0;x<26;x++){const h=Math.round(10+x*.9+Math.sin(x*.5)*2);P(x,h,1,54-h,'#1e1e24');P(x,h,1,1,'#2e2e36');}
+    for(let x=72;x<96;x++){const h=Math.round(12+(96-x)*.8+Math.sin(x*.4)*2);P(x,h,1,54-h,'#1e1e24');P(x,h,1,1,'#2e2e36');}
+    house(4,22,9,6,'#3a3030','#2a1e1e',true);house(80,22,10,6,'#3a3030','#2a1e1e',true);
+    P(8,40,14,1,'#5a4a3a');if(!(S&&S.d&&S.d.lina==='free')){P(10,32,10,9,'#141a20');for(let k=0;k<10;k+=2)P(10+k,32,1,9,'#4a4048');P(10,32,10,1,'#4a4048');fig(14,34,'#8a6a8a');}},
+  temple(){bands([['#122634',10],['#163040',12],['#1a3848',12],['#1e4050',20]]);
+    for(let k=0;k<5;k++)for(let y=0;y<44;y++)P(10+k*20+y*.4,y,3,1,'#1d4454');
+    P(0,44,96,10,'#3a4a44');const r=rng(51);for(let i=0;i<30;i++)P(r()*96,45+r()*9,1,1,'#4a5a52');
+    P(12,16,6,28,'#30505a');P(11,14,4,2,'#30505a');P(78,22,6,22,'#30505a');P(80,20,3,2,'#30505a');P(28,28,5,16,'#2c4a54');
+    P(38,18,22,26,'#2a4650');P(36,16,26,3,'#335560');tri(49,8,9,'#2e4e58',1.1);P(45,28,8,16,'#0e1a22');P(46,27,6,1,'#0e1a22');circ(49,22,2,'#4a7a7a');},
+  manor(){bands([['#1a1c24',10],['#20232c',10],['#282a34',8],['#30323c',6]]);P(0,40,40,14,'#1a2a38');
+    for(let x=30;x<96;x++){const h=Math.round(38+Math.sin(x*.2)*1.5-(x<36?(36-x)*-2:0));P(x,h,1,54-h,'#1e1e24');}
+    P(42,16,36,24,'#2e2834');tri(60,6,11,'#262030',1.3);P(40,10,7,30,'#2a2430');tri(43,4,6,'#262030',1.2);P(74,12,7,28,'#2a2430');tri(77,6,6,'#262030',1.2);
+    P(57,32,6,8,'#141218');P(59,1,3,3,'#e2ddd0');},
+  tavern(){P(0,0,96,54,'#241a18');for(let y=0;y<36;y+=4)P(0,y,96,1,'#2e221e');P(4,10,40,2,'#4a3428');
+    [[6,7,'#5a7a5a'],[10,6,'#8a4a3a'],[15,7,'#6a6a8a'],[20,6,'#8a7a4a'],[26,7,'#5a7a5a'],[32,6,'#8a4a3a'],[38,7,'#6a6a8a']].forEach(([x,y,c])=>{P(x,y,2,4-(y-6),c);});
+    P(0,36,60,6,'#5a4030');P(0,35,60,1,'#6e5640');P(70,20,22,24,'#3a3030');P(72,18,18,2,'#4a3a38');P(74,30,12,12,'#140e0e');
+    [[8,44],[24,44]].forEach(([x,y])=>{P(x,y-6,8,7,'#5a4030');P(x,y-4,8,1,'#3a2a20');P(x,y-2,8,1,'#3a2a20');});P(0,44,96,10,'#1a1210');P(52,40,6,1,'#c8bfa8');},
+  clinic(){P(0,0,96,54,'#1e2226');for(let y=0;y<40;y+=5)P(0,y,96,1,'#232830');P(64,6,18,14,'#2e3a44');P(72,6,1,14,'#1e2226');P(64,12,18,1,'#1e2226');
+    [[6,36],[30,38]].forEach(([x,y])=>{P(x,y,20,4,'#a89f8a');P(x,y+4,20,1,'#5a5048');P(x,y+5,1,4,'#4a4038');P(x+19,y+5,1,4,'#4a4038');P(x+2,y-1,5,2,'#c8bfa8');});
+    [[54,22],[62,24],[84,23]].forEach(([x,y])=>{P(x,y+5,5,16,'#d0ccc0');circ(x+2,y+2,2,'#d8d4c8');P(x-1,y+8,2,8,'#c4c0b4');});
+    P(0,44,96,10,'#181b1e');P(44,38,8,2,'#5a4a3a');P(45,40,1,4,'#4a3a2c');P(50,40,1,4,'#4a3a2c');}
+});
+Object.assign(FX,{
+  seamap(){FX.map();for(let i=0;i<12;i++)if((T+i*5)%16<3)P(50+(i*29)%44,4+(i*17)%46,2,1,'#3a5468');},
+  port(){for(let y=29;y<54;y++){P(48,y,48,1,'#2e4a64');const sp=.3+(y-29)*.05,off=Math.floor(T*sp+y*7)%12;for(let x=36;x<96;x+=12)if(x+off>=48)P(x+off,y,3,1,'#36587a');}
+    P(50,40,30,2,'#6e5640');for(let x=52;x<80;x+=6)P(x,42,1,7,'#4f3d2e');
+    const by=Math.round(Math.sin(T*.22));P(70,34+by,20,4,'#4a3828');P(72,38+by,16,1,'#3a2a20');P(79,14+by,1,20,'#6e5640');tri(80,16+by,10,'#b8ae98',1.6);P(80,13+by,4-(Math.floor(T/3)%2),2,'#8a3b3b');
+    for(let i=0;i<3;i++){const x=Math.floor(T*.5+i*40)%130-20,y=8+i*4+Math.round(Math.sin(T*.25+i)*2),f=(T+i*2)%6<3;P(x,y,1,1,'#d8d0c0');P(x-1,y+(f?-1:1),1,1,'#d8d0c0');P(x+1,y+(f?-1:1),1,1,'#d8d0c0');}
+    [[4,28],[15,30],[6,38],[32,38]].forEach(([x,y],i)=>flicker(x,y,2,2,['#d9b26a','#ecc87e','#b8904a'],i*4));},
+  beach(){const o=Math.floor(T/2)%8;for(let x=-8;x<96;x+=8)P(x+o,39,4,1,'#8fb0c4');P(0,40,96,1,'#a89a78');for(let y=30;y<39;y+=3){const off=Math.floor(T*.4+y*3)%10;for(let x=-10;x<96;x+=10)P(x+off,y,3,1,'#36587a');}
+    const x=Math.floor(T*.6)%120-10,f=T%6<3;P(x,10,1,1,'#d8d0c0');P(x-1,10+(f?-1:1),1,1,'#d8d0c0');P(x+1,10+(f?-1:1),1,1,'#d8d0c0');},
+  saltflat(){for(let i=0;i<14;i++)if((T+i*7)%18<2)P((i*37)%94+1,34+(i*11)%18,1,1,'#f4efe2');
+    for(let i=0;i<4;i++){const span=20,p=(T*.25+i*11)%(span*2),x=30+i*9+(p<span?p:span*2-p)*.5;fig(Math.round(x),40+(i%2)*3,'#6a6258');P(Math.round(x)-1,39+(i%2)*3,4,1,'#d8d4cc');}
+    if(T%10<5)P(0,31,96,1,'#9c968e');},
+  lighthouse(){twinkle(47,24,30);for(let y=34;y<54;y++){const off=Math.floor(T*.3+y*5)%14;for(let x=-14;x<96;x+=14)P(x+off,y,3,1,'#284660');}
+    if(S&&S.d&&S.d.lit){const dir=Math.sin(T*.09);for(let t=1;t<46;t++){const half=1+t*.13;P(60+dir*t,5-half,1,half*2,'rgba(240,208,128,0.16)');}if(Math.abs(dir)<.25){circ(60,5,4,'rgba(250,230,170,0.35)');}P(59,4,3,2,'#f6dc90');}},
+  cove(){for(let y=36;y<54;y++){const off=Math.floor(T*.3+y*5)%12;for(let x=-12;x<96;x+=12)P(x+off,y,3,1,'#24405a');}
+    const by=Math.round(Math.sin(T*.2));P(36,36+by,26,4,'#2a1e18');P(58,32+by,5,4,'#2a1e18');P(38,40+by,22,1,'#1e1612');P(44,12+by,1,24,'#3a2a20');P(54,16+by,1,20,'#3a2a20');
+    P(39,14+by,10,10,'#141216');P(40,24+by,8,1,'#141216');P(50,18+by,9,8,'#141216');P(46,10+by,4,2,'#141216');P(47,10+by,1,1,'#c8c2b2');
+    flicker(60,30+by,2,2,['#d9b26a','#f0d080','#8a6a3a'],0);[[7,24],[83,24]].forEach(([x,y],i)=>flicker(x,y,2,2,['#d9b26a','#ecc87e','#b8904a'],i*4));},
+  temple(){for(let i=0;i<10;i++){const sp=.7+(i%3)*.25,y=44-((T*sp+i*9)%46),x=(i*23+7)%92+Math.round(Math.sin((T+i*5)*.2));P(x,y,1,1,'#7fb3c0');if(i%3===0)P(x+1,y-1,1,1,'#5a8a98');}
+    for(let i=0;i<3;i++){const dir=i%2?1:-1,x=dir>0?Math.floor(T*.4+i*40)%120-12:96-(Math.floor(T*.35+i*30)%120)+12,y=20+i*8;P(x,y,3,1,i===1?'#d2ad66':'#82b4b3');P(x+(dir>0?-1:3),y+(T%4<2?-1:1),1,1,i===1?'#d2ad66':'#82b4b3');}
+    [8,22,66,72,90].forEach((x,i)=>{for(let y=0;y<10;y++){const sw=Math.round(Math.sin(T*.2+y*.4+i)*(y/5));P(x+sw,44-y,1,1,y>6?'#4a7a4a':'#3a5a3a');}});
+    if(T%30<15)circ(49,22,2,'#6aa0a0');},
+  manor(){if(T%47<1){P(0,0,96,30,'#4a4a58');for(let y=0;y<16;y++)P(22+Math.round(Math.sin(y*1.3)*2),y,1,1,'#e2ddd0');}
+    for(let i=0;i<50;i++){const x=(i*37+Math.floor(T*1.5))%100-2,y=(i*19+Math.floor(T*3))%56-2;P(x,y,1,2,'#3e4452');}
+    [[45,20],[51,20],[57,20],[63,20],[69,20],[45,28],[51,28],[63,28],[69,28],[42,16],[76,16]].forEach(([x,y],i)=>flicker(x,y,2,3,['#d9b26a','#ecc87e','#8a6a3a'],i*3));
+    if(T%20<10)circ(60,2,2,'rgba(226,221,208,0.35)');},
+  tavern(){flame(75,41,10,9,0);sparks(76,8,32,3,1,'#f0c070');[[14,34],[40,34]].forEach(([x,y],i)=>{P(x,y,1,1,'#cfc6a8');const h=1+((T+i*3)%5<2?1:0);P(x,y-h,1,h,'#e0b060');});
+    if(T%8<4)P(53,38,1,2,'#5a5050');else P(54,37,1,2,'#5a5050');},
+  clinic(){P(47,36,1,2,'#cfc6a8');const h=1+((T)%5<2?1:0);P(47,36-h,1,h,'#e0b060');
+    for(let i=0;i<6;i++){const x=64+((i*5+Math.floor(T*.15))%18),y=8+((i*7+Math.floor(T*.1))%30);P(x,y,1,1,'#3a4650');}
+    [10,18,26,34].forEach((x,i)=>{const sw=Math.round(Math.sin(T*.15+i));P(x,0,1,6,'#3a4a2e');P(x+sw-1,6,3,2,'#6a8a4a');P(x+sw,8,1,1,'#4a6a3a');});}
+});
+
+/* --- 상점 도우미 --- */
+const accItem=(k,p)=>({n:ACC[k].n,p,d:ACC[k].d,if:()=>S.acc!==k,buy:()=>setAcc(k)});
+function setAcc(k){if(S.acc==='charm'){S.maxHp-=10;S.hp=Math.min(S.hp,S.maxHp);}S.acc=k;if(k==='charm'){S.maxHp+=10;S.hp+=10;S.salt=false;}}
+const anti=p=>({n:'해독제',p,d:'소금독 치료 · 전투 중에도 사용',buy:()=>S.anti=(S.anti||0)+1});
+const bomb=p=>({n:'기름 단지',p,d:`던지면 방어를 무시하고 ${18}+레벨 피해`,buy:()=>S.bomb=(S.bomb||0)+1});
+
+/* --- 시작 / 클리어 데이터 --- */
+function hasClear(){try{return!!localStorage.getItem(KEYC);}catch(e){return false;}}
+function startD1(base){S=JSON.parse(JSON.stringify(base.S));S.endKind=base.k;S.dlc=1;S.d={};S.day=1;S.plague=55;S.hp=S.maxHp;S.sp=2;S.pot+=2;S.gold+=60;S.loc='port';S.salt=false;S.bomb=(S.bomb||0)+1;S.anti=(S.anti||0)+1;S.acc=S.acc||null;S.k2=0;S.last='d_port';world();go('d_intro');}
+function startD1FromClear(){try{const d=JSON.parse(localStorage.getItem(KEYC));if(d){startD1(d);return;}}catch(e){}title();}
+function endChoices(k){
+  if(['exile','sword','found'].includes(k)){const snap={S:JSON.parse(JSON.stringify(S)),k};try{localStorage.setItem(KEYC,JSON.stringify(snap));}catch(e){}
+    return[{t:'DLC 1 · 흰모래항의 등불을 진행한다',sub:`Lv ${S.lvl}, 지금 장비 그대로 남쪽 해안 도시로 떠난다`,fn:()=>{startD1(snap);}},{t:'여기서 끝낸다',sub:'타이틀 화면에서 언제든 DLC를 시작할 수 있다',fn:()=>{title();}}];}
+  if(k==='d1sea'||k==='d1break')return[{t:'DLC 2 — 준비 중',need:()=>false,why:'다음 이야기는 곧 이어집니다'},{t:'처음부터 다시',fn:()=>{title();}}];
+  if(k.startsWith('d1'))return[{t:'DLC 1을 처음부터 다시',if:hasClear,fn:()=>{startD1FromClear();}},{t:'타이틀로',fn:()=>{title();}}];
+  return[{t:'처음부터 다시',fn:()=>{title();}}];}
+
+/* --- 장면 --- */
+const dleave={t:'지도를 펼친다',go:'map'};
+const hubD=()=>LOCS2[S.loc].hub;
+SC.d_intro=()=>({place:'DLC 1 · 흰모래항의 등불',title:'남쪽 해안',art:'beach',text:[
+  S.endKind==='exile'?'북쪽 고개를 넘은 지 석 달. 낡은 검 한 자루와 빈 물통을 들고 걷다 보니, 바람에서 소금 냄새가 나기 시작했다.':
+  S.endKind==='sword'?'돌샘은 부하들에게 맡겼다. 목책을 더 높이려면 쇠가 필요했고, 쇠를 사려면 소금이 필요했다. 당신은 남쪽 해안의 소금 도시로 향했다.':
+  '새샘에 소금이 떨어졌다. 마을 사람들이 모은 은화 주머니를 허리에 차고, 당신은 남쪽 해안의 소금 도시로 내려왔다.',
+  S.f&&S.f.dog?'잿불이 파도 소리에 귀를 세운다.':'',
+  '흰모래항. 하얀 벽의 집들이 언덕을 따라 바다까지 흘러내리는 항구 도시. 그런데 성문은 닫혀 있고, 성벽 위 경비병의 얼굴에 천이 감겨 있다.',
+  '경비병 「역병이다! 들어가면 못 나와. 그래도 들어올 텐가?」'],
+  choices:[{t:'그래도 들어간다',go:'d_arrive'}]});
+SC.d_arrive=()=>({place:'흰모래항',title:'소금이 되는 사람들',art:'clinic',npc:'mia',text:[
+  '골목마다 하얀 조각상이 서 있다. 가까이 보니 사람이다. 장바구니를 든 채, 아이를 안은 채, 소금으로 굳어 버린 사람들.',
+  '앞치마에 약초 물이 든 여자가 당신 팔을 붙잡는다.',
+  '의원 미아 「살갗이 하얗게 굳기 시작하면 한 달을 못 버텨요. 이대로면 쉰다섯 날 안에 항구 전체가 소금 정원이 될 거예요. 석 달 전, 바론 카스파가 바다 밑에서 뭔가를 건져 올린 뒤로 시작됐어요.」',
+  '미아 「의회의 이솔 의장이 사람을 찾고 있어요. 칼 쓸 줄 아는 사람을요.」',
+  '§새 임무: 의회의 이솔 의장을 만난다 · 역병이 항구를 삼키기까지 55일'],
+  choices:[{t:'항구로 나간다',go:'d_port'}]});
+
+SC.d_port=()=>{const d=S.d;
+  if(d.lantern&&!d.holder)return{place:'흰모래항',title:'등불을 든 귀환',art:'port',save:true,text:['당신이 부두에 내리자 품속의 등불이 푸르게 빛난다. 굳어 가던 사람들이 그 빛을 향해 고개를 돌린다.','미아, 이솔, 그리고 교단의 흰 옷 사제가 동시에 부두로 달려온다. 등불을 누가 맡을 것인가.'],choices:[{t:'등불의 주인을 정한다',go:'d_holder'}]};
+  const t=['흰모래항. 하얀 계단 골목이 부두까지 이어진다. 갈매기 울음 사이로 기침 소리가 들린다.'];
+  if(remain()<=15)t.push('거리의 소금 조각상이 눈에 띄게 늘었다. 시간이 없다.');
+  if(d.holder&&!d.kaspar)t.push('등불의 빛이 역병의 걸음을 늦추고 있다. 이제 근원을 끊을 차례다. 북쪽 절벽 위 카스파 저택.');
+  return{place:'흰모래항',title:'하얀 계단의 항구',art:'port',save:true,text:t,choices:[
+    {t:'의회당',go:'d_council'},{t:'선술집 \'짠물\'',go:'d_tavern'},{t:'미아의 치유소',go:'d_clinic'},{t:'부두 시장',go:'d_market'},{t:'부두 게시판',go:'d_board'},{t:'임무 일지',go:'d_log'},dleave]};};
+
+SC.d_council=()=>{const d=S.d,t=[],ch=[];
+  if(!d.met){d.met=true;
+    t.push('의회당 대리석 바닥 위로 소금 가루가 깔려 있다. 의장 이솔이 지친 얼굴로 지도를 펼친다.');
+    t.push('이솔 「가라앉은 사원의 전설을 아시오? 바다 밑 사원에 \'조수의 등불\'이 있어, 바다가 내린 저주를 씻는다고 하오. 등불을 가져오시오.」');
+    t.push('이솔 「사원으로 가는 길은 둘이오. 등대섬의 교단은 사원 위치를 알고 잠수종을 갖고 있소. 검은돛 만의 해적들에겐 잠수선이 있고.」');
+    t.push('이솔 「...그리고 카스파. 그자가 이 일의 시작이라는 걸 다들 알지만, 의회 금고의 절반을 그자가 채우오. 증거 없이는 의회가 그를 건드릴 수 없소. 소금벌 염전을 살펴보면 뭔가 나올지도 모르오.」');
+    t.push('§새 임무: 사원으로 가는 길 · 소금벌의 진실 — 지도에 새 장소가 표시되었다');}
+  else{t.push('이솔 「진척이 있소?」');
+    if(d.ledger&&!d.councilReady)t.push('당신이 그렌의 장부를 내밀자 이솔의 손이 떨린다.');
+    if(d.councilReady)t.push('이솔 「의회 경비대가 준비되어 있소. 저택으로 갈 때 말만 하시오.」');}
+  ch.push({t:'그렌의 장부를 내민다',sub:'의회가 카스파를 칠 명분이 된다',if:()=>d.ledger&&!d.councilReady,fn:()=>{d.councilReady=true;S.gold+=50;NOTE='이솔이 경비대를 소집했다. 의회가 사례로 금화 50닢을 건넸다.';return'd_council';}});
+  ch.push({t:'의회당을 나선다',go:'d_port'});
+  return{place:'흰모래항 · 의회당',title:'의장 이솔',art:'clinic',npc:'isol',text:t,choices:ch};};
+
+SC.d_tavern=()=>{const d=S.d,n=d.brawl||0;const t=['소금에 절인 생선과 독한 럼 냄새. 주인 곤도가 잔을 내려놓는다.'];
+  t.push(['곤도 「등대섬 교단 놈들은 사원 위치를 안다고 떠들지. 대신 등불을 자기네가 모셔야 한대. 검은돛 흑치는... 돈이든 칼이든, 센 놈 말만 들어.」','곤도 「등대지기 오센 영감 딸 리나가 검은돛 놈들한테 잡혀갔다더군. 영감이 매일 부두에 나와 울어.」','곤도 「소금벌? 거긴 사람이 소금을 캐는 게 아니라, 소금이 사람을 캔다는 말이 있지.」'][S.day%3]);
+  if(n<3)t.push(`곤도 「주먹 대회 하겠나? 세 판 다 이기면 진주 반지랑 금화 백 닢. 지금까지 ${n}판 이겼군.」`);else t.push('벽에 걸린 우승자 명판에 당신 이름이 새로 새겨져 있다.');
+  return{place:'흰모래항 · 선술집',title:'짠물',art:'tavern',npc:'gondo',text:t,choices:[
+    {t:`주먹 대회 ${n+1}판에 나간다`,sub:'지면 금화 20을 잃는다 · 목숨을 걸진 않는다',if:()=>n<3,fn:()=>{fight('brawler',{art:'tavern',noflee:true,mul:[1,1.3,1.6][n],intro:['짠물의 장사가 소매를 걷어붙인다.','두 번째 장사는 머리 하나가 더 크다.','결승. 상대는 작년 우승자, 손등에 닻 문신이 있다.'][n],win:()=>{d.brawl=n+1;if(d.brawl===3){setAcc('pearl');S.gold+=100;NOTE='우승! 진주 반지와 금화 100닢을 받았다. (진주 반지 착용)';}else NOTE=`${n+1}판 승리.`;return'd_tavern';},lose:'d_brawlLose'});}},
+    rest(8),{t:'선술집을 나선다',go:'d_port'}]};};
+SC.d_brawlLose=()=>{S.gold=Math.max(0,S.gold-20);S.hp=Math.max(S.hp,8);return{place:'흰모래항 · 선술집',title:'바닥의 맛',art:'tavern',npc:'gondo',text:['정신을 차리니 톱밥 깔린 바닥이다. 구경꾼들이 내기 돈을 나눈다.','곤도 「다음엔 덜 맞게나.」 (금화 -20)'],choices:[{t:'일어난다',go:'d_tavern'}]};};
+
+SC.d_clinic=()=>{const d=S.d,t=['굳어 가는 사람들이 침대마다 누워 있다. 창가엔 다 굳어 버린 이들이 조각상처럼 서 있다.'],ch=[];
+  if(S.salt)t.push('미아 「당신 손등도 하얘지고 있어요. 이리 와요.」');
+  if(!d.herbQ){t.push('미아 「소금벌 언저리에 바다쑥이 자라요. 그걸 달이면 해독제를 만들 수 있는데, 거긴 망령들이 돌아다녀서...」');ch.push({t:'바다쑥을 구해 오겠다고 한다',fn:()=>{d.herbQ=1;NOTE='새 임무: 미아의 바다쑥';return'd_clinic';}});}
+  else if(d.herb&&!d.herbDone)ch.push({t:'바다쑥을 건넨다',fn:()=>{d.herbDone=1;S.anti=(S.anti||0)+3;S.k2+=1;NOTE='미아가 해독제 3병을 달여 주었다.';return'd_clinic';}});
+  else if(d.herbDone)t.push('미아 「바다쑥 덕분에 열두 명이 하루를 더 벌었어요.」');
+  ch.push({t:'소금독을 치료받는다 — 10금',if:()=>S.salt,need:()=>S.gold>=10,why:'금화가 모자란다',fn:()=>{S.gold-=10;S.salt=false;NOTE='살갗이 다시 부드러워졌다.';return'd_clinic';}});
+  ch.push(...shop([anti(20)]));ch.push({t:'치유소를 나선다',go:'d_port'});
+  return{place:'흰모래항 · 치유소',title:'의원 미아',art:'clinic',npc:'mia',text:t,choices:ch};};
+
+SC.d_market=()=>({place:'흰모래항 · 부두 시장',title:'소금과 비늘의 시장',art:'port',text:['역병에도 시장은 열려 있다. 값은 두 배가 됐지만.','해안의 무구상은 남쪽 바다 해적들의 칼과 상어 가죽을 판다.'],
+  choices:[...shop([potion(15),anti(22),bomb(30),weapon('cutlass',220),armor('shark',240),accItem('hook',150)]),{t:'시장을 나선다',go:'d_port'}]});
+SC.d_board=()=>({place:'흰모래항 · 부두 게시판',title:'부두 게시판',art:'port',text:['§바위게 떼가 그물을 찢고 있음. 소탕하면 금화 50 — 어부 조합'],
+  choices:[{t:'바위게를 잡으러 간다',sub:'2일 걸림 · 반복 가능',fn:()=>{const x=tick(2);if(x)return x;fight('crab',{art:'beach',mul:1.3,intro:'모래톱 아래에서 집게가 솟구친다!',win:()=>{S.gold+=50;NOTE='현상금 50금을 받았다.';return'd_port';}});}},{t:'돌아간다',go:'d_port'}]});
+
+SC.d_log=()=>{const d=S.d,L=[];const st=(done,prog)=>done?'완료':prog?'진행 중':'아직';
+  L.push(`§[주] 사원으로 가는 길 — ${d.way?'완료 · '+(d.way==='cult'?'교단의 잠수종':'검은돛의 잠수선'):'등대섬 교단 또는 검은돛 해적의 도움을 얻는다'}`);
+  L.push(`§[주] 소금벌의 진실 — ${d.flats?'완료 · '+{revolt:'노동자 봉기',stealth:'장부를 훔쳤다',bribed:'뇌물을 받았다'}[d.flats]:'염전에서 카스파의 비밀을 찾는다'}`);
+  L.push(`§[주] 가라앉은 사원 — ${d.lantern?'완료 · 조수의 등불을 얻었다':d.way?'사원으로 내려가 등불을 찾는다':'아직 사원으로 갈 방법이 없다'}`);
+  L.push(`§[주] 등불의 주인 — ${d.holder?'완료 · '+{mia:'미아의 치유소',cult:'등대섬 교단',council:'의회'}[d.holder]:'등불을 가져와 맡길 곳을 정한다'}`);
+  L.push(`§[주] 왕관의 주인 — ${d.holder?'카스파 저택으로 간다'+(d.councilReady?' (의회 경비대 동행 가능)':''):'등불을 먼저 찾아야 한다'}`);
+  L.push(`§[부] 미아의 바다쑥 — ${d.herbDone?'완료':d.herb?'바다쑥을 미아에게 가져간다':d.herbQ?'소금벌에서 바다쑥을 캔다':'치유소에서 받을 수 있다'}`);
+  L.push(`§[부] 짠물 주먹 대회 — ${(d.brawl||0)>=3?'완료 · 우승':`${d.brawl||0}/3 승`}`);
+  L.push(`§[부] 등대지기의 딸 — ${d.lina==='home'?'완료':d.lina==='free'?'리나를 등대섬의 오센에게 데려간다':'검은돛 만에 갇힌 리나를 구한다'}`);
+  L.push(`역병이 항구를 삼키기까지 ${remain()}일.`);
+  return{place:'흰모래항',title:'임무 일지',art:'port',text:L,choices:[{t:'닫는다',go:'d_port'}]};};
+
+/* 소금벌 */
+SC.d_flats=()=>{const d=S.d,t=[],ch=[];
+  if(!d.flats){t.push('끝없이 하얀 소금벌. 손발이 하얗게 굳어 가는 노동자들이 소금 자루를 지고 걷는다. 감시탑 위에서 감독관 그렌이 쇠사슬 채찍을 늘어뜨리고 있다.');
+    ch.push({t:'노동자들과 이야기한다',go:'d_workers'});}
+  else if(d.flats==='revolt')t.push('불탄 감시탑 아래에서 노동자들이 처음으로 자기 몫의 소금을 쌓고 있다.');
+  else if(d.flats==='stealth')t.push('그렌은 장부가 사라진 걸 아직 모르는 눈치다. 노동자들은 여전히 자루를 진다.');
+  else t.push('그렌이 감시탑에서 당신에게 손을 흔든다. 노동자들은 당신 쪽을 보지 않는다.');
+  ch.push({t:'염전 끝에서 바다쑥을 캔다',if:()=>d.herbQ&&!d.herb,fn:()=>{fight('saltghoul',{art:'saltflat',intro:'바다쑥 덤불 옆에 서 있던 소금상이 고개를 돌린다!',win:()=>{d.herb=1;NOTE='바다쑥 한 아름을 캤다.';return'd_flats';}});}});
+  ch.push(dleave);
+  return{place:'소금벌',title:'하얀 염전',art:'saltflat',save:true,text:t,choices:ch};};
+SC.d_workers=()=>({place:'소금벌',title:'굳어 가는 손',art:'saltflat',npc:'worker',text:[
+  '늙은 노동자가 손가락이 굳어 펴지지 않는 손으로 소금 한 줌을 보여 준다. 유난히 희고 곱다.',
+  '노동자 「이게 \'흰모래 소금\'이오. 내륙 귀족들이 금값으로 사 가지. 어디서 나는지 아시오? 다 굳어 버린 사람들을 갈아서 만드는 거요. 카스파 바론은 역병이 퍼질수록 돈을 버는 거지.」',
+  '노동자 「그렌 놈 탑에 장부가 있소. 누가 언제 굳었고, 몇 근이 나왔는지 다 적혀 있지.」',
+  '주변의 노동자들이 하나둘 곡괭이를 쥔 손에 힘을 준다.'],
+  choices:[
+    {t:'봉기를 돕는다',sub:'그렌과 정면으로 싸운다 · 노동자들이 해방된다',fn:()=>{fight('overseer',{art:'saltflat',intro:'노동자들의 함성 속에 그렌이 탑에서 뛰어내린다!',win:()=>{S.d.flats='revolt';S.d.ledger=true;S.k2+=2;return'd_revolt';}});}},
+    {t:'밤에 장부만 훔쳐 나온다',sub:'2일 · 경비 한 명과 마주칠 수 있다',fn:()=>{const x=tick(2);if(x)return x;fight('merc',{art:'saltflat',mul:.8,intro:'탑 계단에서 졸던 용병이 눈을 뜬다!',win:()=>{S.d.flats='stealth';S.d.ledger=true;return'd_stolen';}});}},
+    {t:'그렌의 돈을 받고 눈감는다',sub:'금화 150 · 증거는 없다',fn:()=>{S.d.flats='bribed';S.gold+=150;S.k2-=2;NOTE='금화 150닢이 묵직하다.';return'd_flats';}},
+    {t:'일단 물러난다',go:'d_flats'}]});
+SC.d_revolt=()=>({place:'소금벌',title:'불타는 감시탑',art:'saltflat',npc:'worker',text:['그렌이 쓰러지자 노동자들이 감시탑에 불을 지른다. 하얀 소금벌 위로 검은 연기가 오른다.','당신은 불길 속에서 가죽 장부를 꺼낸다. 굳은 사람들의 이름과 무게가 빼곡하다.','노동자 「카스파 저택으로 갈 때 부르시오. 이 손으로 곡괭이 정도는 아직 쥘 수 있소.」','§그렌의 장부를 얻었다 · 노동자들이 최후의 싸움에 함께한다'],choices:[{t:'염전으로',go:'d_flats'}]});
+SC.d_stolen=()=>({place:'소금벌',title:'달빛 아래 장부',art:'saltflat',text:['당신은 장부를 품에 넣고 소금벌을 빠져나온다. 등 뒤에서 노동자들의 기침 소리가 이어진다.','§그렌의 장부를 얻었다 · 의회에 보이면 카스파를 칠 명분이 된다'],choices:[{t:'염전으로',go:'d_flats'}]});
+
+/* 등대섬 */
+SC.d_light=()=>{const d=S.d,t=[],ch=[];
+  t.push(d.lit?'등대의 불빛이 바다를 쓸고 지나간다. 빛이 머무는 곳, 먼바다 한가운데의 물빛이 이상하게 푸르다.':'불 꺼진 등대. 흰 옷의 교단 사제들이 섬 바위 위에서 기도를 올린다. 그 옆에 늙은 등대지기 오센이 멍하니 바다를 본다.');
+  if(!d.way){t.push('대사제 아우렐 「사원의 위치는 등대 불빛만이 가리킨다. 불을 다시 밝혀라. 그러면 교단의 잠수종을 내어 주마. 단, 등불은 교단의 제단에 모신다고 바다에 맹세하라.」');
+    ch.push({t:'맹세하고 등대에 오른다',sub:'교단의 도움으로 사원에 간다 · 등불을 교단에 넘기기로 약속',fn:()=>{fight('gull',{art:'lighthouse',intro:'나선 계단 꼭대기, 소금 갈매기떼가 날카롭게 울며 덮쳐 온다!',win:()=>{fight('gull',{art:'lighthouse',mul:1.3,intro:'등롱 방 안에도 둥지가 있다. 더 큰 무리가 날아오른다!',win:()=>{d.lit=true;d.way='cult';d.cultOath=true;S.k2+=1;return'd_lit';}});}});}});}
+  if(d.lina==='free'){ch.push({t:'리나를 오센에게 데려다준다',fn:()=>{d.lina='home';S.k2+=1;setAcc('charm');NOTE='오센이 소금 부적을 건넸다. (착용: 소금독 면역, 최대 체력 +10)';return'd_osen';}});}
+  else if(d.lina!=='home')t.push('오센 「검은돛 놈들이 우리 리나를... 누가 좀...」');
+  ch.push(dleave);
+  return{place:'등대섬',title:'꺼진 등대',art:'lighthouse',npc:d.lina==='home'?'lina':'aurel',save:true,text:t,choices:ch};};
+SC.d_lit=()=>({place:'등대섬',title:'다시 켜진 불',art:'lighthouse',npc:'aurel',text:['당신이 기름을 붓고 부싯돌을 치자, 등롱 안에서 하얀 불길이 솟는다. 빛줄기가 바다를 가로지르며 한 점에 멈춘다.','아우렐 「저기다. 가라앉은 사원. 잠수종은 섬 남쪽 선착장에 있다. 잊지 마라, 등불은 교단의 것이다.」','§가라앉은 사원이 지도에 표시되었다'],choices:[{t:'섬으로 내려간다',go:'d_light'}]});
+SC.d_osen=()=>({place:'등대섬',title:'아버지와 딸',art:'lighthouse',npc:'lina',text:['오센이 리나를 끌어안고 한참을 운다.','오센 「이건 내 아비가 등대지기 시절 바다에서 건진 부적이오. 소금이 몸에 붙지 않는다더군. 가져가시오.」'],choices:[{t:'섬으로',go:'d_light'}]});
+
+/* 검은돛 만 */
+SC.d_cove=()=>{const d=S.d,t=[],ch=[];
+  t.push('절벽 사이 좁은 만에 검은 돛의 배 \'바다뱀\'이 정박해 있다. 해적들이 모닥불 곁에서 주사위를 던진다.');
+  if(d.lina!=='free'&&d.lina!=='home')t.push('해안의 철창 안에 붉은 머리의 처녀가 웅크려 있다. 등대지기의 딸 리나다.');
+  if(!d.way){t.push('흑치 선장 「사원? 바다뱀이라면 잠수가 되지. 공짜는 없다. 금화 이백 닢을 내든가, 내 칼을 꺾어 봐. 센 놈 말은 듣는 게 검은돛 법이지.」');
+    ch.push({t:'흑치에게 결투를 신청한다',sub:'이기면 잠수선과 리나를 모두 얻는다',fn:()=>{fight('blacktooth',{art:'cove',intro:'흑치가 금니를 드러내며 웃는다. 「좋아, 피 좀 보자!」',win:()=>{d.way='pirate';d.duel=true;if(d.lina!=='home')d.lina='free';S.k2+=1;return'd_pirate';}});}});
+    ch.push({t:'금화 200을 낸다',sub:'잠수선만 빌린다',need:()=>S.gold>=200,why:'금화가 모자란다',fn:()=>{S.gold-=200;d.way='pirate';return'd_pirate';}});}
+  if(d.way==='pirate'&&!d.duel&&d.lina!=='free'&&d.lina!=='home')ch.push({t:'리나의 몸값을 낸다 — 80금',need:()=>S.gold>=80,why:'금화가 모자란다',fn:()=>{S.gold-=80;d.lina='free';NOTE='흑치가 철창 열쇠를 던져 준다. 리나가 풀려났다.';return'd_cove';}});
+  if(d.way==='cult'&&d.lina!=='free'&&d.lina!=='home')ch.push({t:'밤에 철창을 부순다',sub:'밀수꾼 둘과 싸운다',fn:()=>{fight('smuggler',{art:'cove',intro:'철창을 지키던 밀수꾼이 고함을 지른다!',win:()=>{fight('smuggler',{art:'cove',mul:1.2,intro:'또 한 놈이 횃불을 들고 달려온다!',win:()=>{d.lina='free';NOTE='리나를 구했다. 등대섬의 오센에게 데려가자.';return'd_cove';}});}});}});
+  ch.push(dleave);
+  return{place:'검은돛 만',title:'바다뱀의 정박지',art:'cove',npc:'blacktooth',save:true,text:t,choices:ch};};
+SC.d_pirate=()=>({place:'검은돛 만',title:'검은돛의 법',art:'cove',npc:'blacktooth',text:[S.d.duel?'흑치가 피 묻은 입가를 닦으며 웃는다. 「오랜만에 제대로 맞았군. 바다뱀은 네 거다, 원하는 만큼. 저 계집애도 데려가.」':'흑치가 금화를 깨물어 본다. 「거래는 거래지. 바다뱀을 내주마.」','§가라앉은 사원이 지도에 표시되었다'],choices:[{t:'만으로',go:'d_cove'}]});
+
+/* 가라앉은 사원 */
+SC.d_temple=()=>{const d=S.d;
+  if(d.lantern)return{place:'가라앉은 사원',title:'고요한 바다 밑',art:'temple',save:true,text:[d.guard==='slain'?'소금 거인의 잔해가 모래에 반쯤 묻혀 있다.':'사원 깊은 곳에서 거인이 무릎을 꿇은 채 잠들어 있다. 왕관이 돌아오기를 기다리며.'],choices:[dleave]};
+  return{place:'가라앉은 사원',title:'푸른 어둠',art:'temple',save:true,text:[d.way==='cult'?'교단의 놋쇠 잠수종이 천천히 가라앉는다. 둥근 창 너머로 무너진 기둥들이 떠오른다.':'바다뱀이 검은 배를 뒤집듯 잠수한다. 흑치의 선원이 창문에 얼굴을 대고 휘파람을 분다.','사원 문 앞, 바닷말 사이로 사람의 형체들이 흔들린다. 익사자들이다.'],
+    choices:[{t:'사원 안으로 들어간다',fn:()=>{fight('drowned',{art:'temple',intro:'익사자가 물을 가르며 손을 뻗는다!',win:()=>{fight('drowned',{art:'temple',mul:1.2,intro:'회랑 끝에서 더 많은 익사자가 몰려온다!',win:'d_guardian'});}});}},dleave]};};
+SC.d_guardian=()=>({place:'가라앉은 사원 · 성소',title:'소금 거인',art:'temple',npc:'giant',text:[
+  '성소 한가운데 빈 받침대가 있고, 그 앞에 소금으로 된 거인이 앉아 있다. 거인의 가슴 속에서 푸른 등불이 고동친다.',
+  '거인 「왕관을 훔친 자의 하수인인가.」 목소리가 물을 울린다.',
+  '거인 「소금왕관은 이 바다의 소금 조수를 가두는 봉인이었다. 봉인이 뭍으로 올라가자 조수가 사람의 피를 타고 흐른다. 등불은 그 소금을 씻지만, 왕관이 돌아오지 않는 한 역병은 끝나지 않는다.」',
+  '거인 「등불을 원하는가? 그럼 내게 맹세하라. 왕관을 이 받침대로 돌려놓겠다고. 아니면, 나를 부수고 가져가라.」'],
+  choices:[
+    {t:'바다에 맹세한다',sub:'싸우지 않고 등불을 얻는다 · 왕관을 돌려놓기로 약속',fn:()=>{const d=S.d;d.guard='oath';d.lantern=true;S.k2+=1;return'd_gotLantern';}},
+    {t:'거인을 부순다',sub:'등불과 함께 거인의 심장에 박힌 대검을 얻는다',fn:()=>{fight('giant',{art:'temple',intro:'거인이 일어선다. 사원 천장에서 모래가 쏟아진다.',win:()=>{const d=S.d;d.guard='slain';d.lantern=true;if(W[S.wpn].a<W.tide.a)S.wpn='tide';NOTE='조수의 대검을 얻었다. (공격력 +11, 착용)';return'd_gotLantern';}});}}]});
+SC.d_gotLantern=()=>{const d=S.d;return{place:'가라앉은 사원',title:'조수의 등불',art:'temple',text:[d.guard==='oath'?'거인이 가슴을 열어 등불을 꺼내 준다. 손바닥 위에서 등불이 차갑게 빛난다.':'무너진 거인의 가슴에서 등불이 굴러 나온다. 그 옆에 푸른 녹이 슨 대검이 꽂혀 있다.','§조수의 등불을 얻었다 · 흰모래항으로 가져가자'],choices:[{t:'수면으로 올라간다',fn:()=>{S.loc='temple';return'map';}}]};};
+
+/* 등불의 주인 */
+SC.d_holder=()=>{const d=S.d;return{place:'흰모래항 · 부두',title:'등불의 주인',art:'port',text:[
+  '미아 「치유소에 맡겨 줘요. 누구든, 순서대로, 공짜로 고칠게요.」',
+  d.cultOath?'흰 옷 사제 「바다에 한 맹세를 잊었는가. 등불은 교단의 제단에 모셔야 한다. 믿는 자만이 씻김을 받을 것이다.」':'흰 옷 사제 「등불은 신성한 것. 교단의 제단에 모셔야 마땅하다.」',
+  '이솔 「의회가 맡겠소. 치료에 값을 매기면 그 돈으로 항구를 다시 세울 수 있소. 당신 몫도 챙겨 드리지.」'],
+  choices:[
+    {t:'미아의 치유소에 맡긴다',sub:d.cultOath?'모두를 고친다 · 교단과의 맹세를 어긴다':'모두를 고친다',fn:()=>{d.holder='mia';S.k2+=2;if(d.cultOath)d.oathBroken=true;return'd_held';}},
+    {t:'등대섬 교단에 맡긴다',sub:d.cultOath?'맹세를 지킨다 · 믿는 자만 고친다':'믿는 자만 고친다',fn:()=>{d.holder='cult';return'd_held';}},
+    {t:'의회에 맡긴다',sub:'치료를 판다 · 금화 150을 받는다'+(d.cultOath?' · 맹세를 어긴다':''),fn:()=>{d.holder='council';S.gold+=150;S.k2-=1;if(d.cultOath)d.oathBroken=true;return'd_held';}}]};};
+SC.d_held=()=>{S.plague+=15;const d=S.d;return{place:'흰모래항',title:'늦춰진 역병',art:'port',text:[
+  d.holder==='mia'?'미아가 등불을 치유소 한가운데 매단다. 푸른 빛 아래서 굳은 손가락이 하나씩 펴진다.':d.holder==='cult'?'사제들이 등불을 받들고 섬으로 떠난다. 부두에 남은 사람들 중 몇몇이 흰 옷을 사러 달려간다.':'이솔이 등불을 의회 금고에 넣는다. 다음 날 아침 의회당 앞에 치료 값 게시문이 붙는다.',
+  d.oathBroken?'멀리 등대섬에서 불빛이 꺼지는 것이 보인다.':'',
+  '등불이 역병의 걸음을 늦춘다. 그러나 왕관이 뭍에 있는 한 끝나지 않는다. (역병 기한 +15일)',
+  '§새 임무: 왕관의 주인 — 카스파 저택으로'],choices:[{t:'부두로',go:'d_port'}]};};
+
+/* 카스파 저택 */
+SC.d_manor=()=>{const d=S.d;
+  if(!d.holder)return{place:'카스파 저택',title:'닫힌 철문',art:'manor',save:true,text:['폭풍우 치는 절벽 위, 창마다 불이 켜진 저택. 철문 앞 용병들이 창을 내민다.','용병 「바론께선 손님을 받지 않으신다. 돌아가.」','지금은 들어갈 방법이 없다. 먼저 등불을 찾아야 한다.'],choices:[dleave]};
+  return{place:'카스파 저택',title:'폭풍의 저택',art:'manor',save:true,text:['비가 옆으로 몰아친다. 저택 꼭대기 탑에서 하얀 빛이 맥박처럼 뛴다. 왕관이다.',d.flats==='revolt'?'소금벌 노동자들이 곡괭이를 들고 절벽 길을 올라온다.':''],
+    choices:[
+      {t:'의회 경비대와 함께 정문을 연다',sub:'싸움 없이 들어간다 · 카스파를 공개 심판할 수 있다',need:()=>d.councilReady,why:'의회를 움직일 증거가 없다',fn:()=>{d.exposed=true;return'd_kaspar';}},
+      {t:'정문을 부수고 쳐들어간다',sub:d.flats==='revolt'?'노동자들이 용병 하나를 맡는다':'용병 둘을 뚫어야 한다',fn:()=>{const next=()=>{fight('merc',{art:'manor',mul:1.1,intro:'홀 계단 위에서 용병이 석궁을 내던지고 칼을 뽑는다!',win:'d_kaspar'});};if(d.flats==='revolt')next();else fight('merc',{art:'manor',intro:'철문 뒤에서 용병이 달려든다!',win:()=>{next();}});}},
+      dleave]};};
+SC.d_kaspar=()=>{const d=S.d;return{place:'카스파 저택 · 탑',title:'바론 카스파',art:'manor',npc:'kaspar',text:[
+  '탑 꼭대기 방. 비단옷을 입은 남자가 창가에 서 있다. 얼굴 절반이 소금으로 굳었는데, 머리 위의 왕관만은 눈부시게 희다.',
+  '카스파 「소금은 썩지 않네. 사람도 그래야 하지. 내 손님들이 사 가는 건 영원이야.」',
+  d.exposed?'이솔이 의회 경비대를 이끌고 문간에 선다. 「바론 카스파. 소금벌 장부의 이름들에 대해 해명하시오.」':'',
+  '카스파 「거래를 하지, 전사. 내 금고의 절반. 그리고 이 항구의 소금길을 자네에게 주겠네. 역병? 언젠가는 멎겠지. 그동안 우린 부자가 되고.」'],
+  choices:[
+    {t:'검을 뽑는다',fn:()=>{fight('kaspar',{art:'manor',mul:d.flats==='revolt'?.85:1,intro:'카스파의 왕관이 하얗게 타오른다. 「그럼 자네도 내 상품이 되게.」',win:()=>{d.kaspar='slain';return'd_crown';}});}},
+    {t:'의회 앞에 그의 죄를 읽는다',sub:'궁지에 몰린 그를 생포한다',need:()=>d.exposed,why:'증인이 될 의회가 없다',fn:()=>{fight('kaspar',{art:'manor',mul:.55,intro:'장부의 이름이 하나씩 읽히자 카스파가 비명을 지르며 달려든다!',win:()=>{d.kaspar='exposed';S.k2+=2;return'd_crown';}});}},
+    {t:'거래를 받아들인다',sub:'금고의 절반',fn:()=>'E_d1gold'}]};};
+SC.d_crown=()=>{const d=S.d;return{place:'카스파 저택 · 탑',title:'소금왕관',art:'manor',text:[
+  d.kaspar==='exposed'?'경비대가 카스파를 끌고 나간다. 바닥에 떨어진 왕관이 당신 발치까지 굴러온다.':'카스파의 몸이 발끝부터 하얗게 굳어 간다. 왕관이 그의 머리에서 미끄러져 떨어진다.',
+  '왕관을 집어 든다. 차갑다. 귓가에 파도 소리 같은 속삭임이 들린다. 써라. 바다가 네 것이 된다.',
+  d.guard==='oath'?'거인에게 한 맹세가 떠오른다.':''],
+  choices:[
+    {t:'바다 밑 사원에 돌려놓는다',sub:d.guard==='oath'?'맹세를 지킨다':'봉인을 되돌린다',fn:()=>'E_d1sea'},
+    {t:'망치로 부순다',sub:d.guard==='oath'?'맹세를 어긴다':'아무도 다시는 쓰지 못하게',fn:()=>'E_d1break'},
+    {t:'머리에 쓴다',sub:'바다가 네 것이 된다',fn:()=>'E_d1king'}]};};
+
+/* 길 위 사건 (DLC) */
+Object.assign(EVENTS,{
+  wreck:{act:'d1',d:()=>({title:'난파선 잔해',art:'beach',text:['모래톱에 부서진 상선이 기울어 있다. 갈매기들이 갑판 위를 맴돈다.'],
+    choices:[{t:'선창을 뒤진다',fn:()=>{if(chance(.5)){S.bomb=(S.bomb||0)+1;NOTE='기름 단지 하나를 찾았다.';}else{const v=rnd(20,40);S.gold+=v;NOTE=`젖은 금화 ${v}닢을 찾았다.`;}return hubD();}},{t:'지나친다',fn:()=>hubD()}]})},
+  saltchild:{act:'d1',d:()=>({title:'하얘지는 아이',art:'beach',text:['길가에 주저앉은 어머니가 아이를 안고 있다. 아이의 발목이 하얗게 굳었다.','어머니 「흰모래항에 가면 고칠 수 있나요? 거기까지 못 갈 것 같아요...」'],
+    choices:[{t:'해독제를 먹인다',need:()=>(S.anti||0)>0,why:'해독제가 없다',fn:()=>{S.anti--;S.k2+=1;NOTE='아이의 발목에 핏기가 돈다.';return hubD();}},{t:'물약을 건넨다',need:()=>S.pot>0,why:'물약이 없다',fn:()=>{S.pot--;S.k2+=1;NOTE='어머니가 몇 번이고 고개를 숙인다.';return hubD();}},{t:'갈 길이 바쁘다',fn:()=>hubD()}]})},
+  fisher:{act:'d1',d:()=>({title:'바닷가 어부',art:'beach',text:['그물을 손질하던 어부가 손을 든다.','어부 「역병 때문에 물고기가 안 팔려. 대신 약초꾼한테 받은 해독제가 있는데, 두 병에 서른 닢 어때?」'],
+    choices:[{t:'해독제 두 병을 산다 — 30금',need:()=>S.gold>=30,why:'금화가 모자란다',fn:()=>{S.gold-=30;S.anti=(S.anti||0)+2;NOTE='해독제 두 병을 샀다.';return hubD();}},{t:'지나친다',fn:()=>hubD()}]})}
+});
+
+/* --- DLC 엔딩 --- */
+function buildD1(k){const d=S.d,n=S.name;
+  if(k==='d1plague')return[{art:'clinic',title:'소금 정원',text:['역병의 기한이 다했다. 흰모래항의 마지막 의원이 자기 손을 내려다보며 굳었다.','몇 해 뒤 이곳을 지나는 상인들은 항구 전체가 하얀 조각상으로 가득한 정원이 되었다고 전했다. 파도만이 그 사이를 드나들었다.'],end:'DLC 1 끝 · 소금 정원'}];
+  if(k==='d1gold')return[{art:'manor',npc:'kaspar',title:'황금의 소금',text:['당신은 카스파와 손을 잡았다. 금고의 절반은 약속대로 당신 것이 되었다.','역병은 멎지 않았다. 흰모래 소금은 더 많이, 더 비싸게 팔렸다.',`내륙의 귀족들은 식탁에 오른 고운 소금이 어디서 왔는지 묻지 않았다. ${n}도 묻지 않았다.`],end:'DLC 1 끝 · 황금의 소금'}];
+  if(k==='d1king')return[{art:'manor',title:'소금 왕',text:['왕관을 쓰자 파도 소리가 멎었다. 아니, 파도가 당신의 숨에 맞춰 치기 시작했다.','흰모래항 사람들은 굳어 가면서도 당신에게 절했다. 소금은 썩지 않고, 당신의 왕국도 썩지 않았다. 다만 그 안에 살아 있는 것이 없을 뿐이었다.']},
+    {art:'temple',title:'빈 받침대',text:[d.guard==='slain'?'바다 밑 사원은 무너졌다. 봉인을 기다리는 자는 더 이상 없었다.':'바다 밑에서 거인이 오래오래 왕관을 기다렸다.','소금 조수는 해마다 한 뼘씩 뭍으로 올라왔다.'],end:'DLC 1 끝 · 소금 왕'}];
+  const s=[];
+  s.push({art:'clinic',place:'흰모래항',title:'등불',text:[
+    d.holder==='mia'?'미아의 치유소 앞 줄은 한 달 동안 끊이지 않았다. 등불 아래서 굳은 살갗이 풀렸고, 거리의 조각상들 중 일곱이 다시 걸어 나왔다.':
+    d.holder==='cult'?'등불은 등대섬 제단에 모셔졌다. 교단의 문을 두드린 자만 나았다. 그해 흰모래항의 절반이 흰 옷을 입었다.':
+    '의회는 치료에 값을 매겼다. 부자들이 먼저 나았다. 가난한 구역의 소금상은 그 뒤로도 오래 거리에 서 있었고, 의회당은 새 대리석으로 단장되었다.',
+    d.herbDone?'미아는 바다쑥 밭을 일궈 해독제를 무료로 나눴다.':'']});
+  s.push({art:'saltflat',place:'소금벌',title:'염전',text:[
+    d.flats==='revolt'?'노동자들은 소금벌에 첫 자유 염전을 열었다. 그들이 캔 소금은 거칠고 누렜지만, 사람을 갈아 만든 것은 아니었다.':
+    d.flats==='stealth'?'장부 덕분에 의회가 염전을 몰수했다. 노동자들은 같은 소금을 캐지만 이제 품삯을 받는다. 그렌은 한동안 감독관 자리를 지켰다.':
+    '소금벌의 굳은 사람들은 여전히 갈려 나갔다. 그렌은 새 주인을 찾았고, 흰모래 소금의 값은 더 올랐다.']});
+  s.push({art:d.way==='cult'?'lighthouse':'cove',place:d.way==='cult'?'등대섬':'검은돛 만',title:d.way==='cult'?'교단':'해적',text:[
+    d.way==='cult'?(d.oathBroken?'맹세를 어긴 전사에게 교단은 문을 닫았다. 등대의 불은 다시 꺼졌고, 이듬해 겨울 상선 두 척이 암초에 부서졌다.':'등대의 불은 다시 꺼지지 않았다. 아우렐은 죽을 때까지 매일 밤 당신의 이름으로 기도를 올렸다.'):
+    (d.duel?'흑치 선장은 바다뱀을 끌고 남쪽 바다로 떠났다. 그 뒤로 검은 돛은 흰모래항 상선을 보면 깃발을 내려 인사했다.':'흑치는 받은 금화로 배를 두 척 더 샀다. 검은돛은 몇 해 동안 해안에서 가장 무서운 이름이었다.'),
+    d.lina==='home'?'리나는 아버지의 뒤를 이어 등대지기가 되었다.':d.lina==='free'?'풀려난 리나는 끝내 등대섬에 닿지 못하고 내륙으로 떠났다는 소문이 돌았다.':'철창 속 리나의 행방은 아무도 몰랐다.']});
+  s.push({art:'temple',place:'가라앉은 사원',title:'봉인',text:[
+    k==='d1sea'?(d.guard==='oath'?'거인은 돌아온 왕관을 받아 들고 고개를 숙였다. 그리고 다시 잠들었다. 바다는 잠잠해졌다.':'주인을 잃은 받침대 위에 왕관이 다시 놓였다. 지키는 자는 없었지만, 소금 조수는 바다 밑으로 물러갔다.'):
+    (d.guard==='oath'?'맹세는 깨졌다. 거인은 빈 받침대 앞에서 일어섰고, 그해 겨울 흰모래항 앞바다가 한 뼘 차올랐다.':'부서진 왕관의 가루는 바다로 흩어졌다. 봉인은 사라졌지만 소금 조수도 그 힘을 잃었다. 사원은 조용히 모래에 묻혔다.')]});
+  s.push({art:'manor',place:'카스파 저택',title:'바론',text:[
+    d.kaspar==='exposed'?'카스파는 의회 광장에서 재판을 받았다. 몰수된 그의 재산은 소금벌 노동자들의 품삯과 굳은 이들의 무덤을 만드는 데 쓰였다.':
+    '바론 카스파는 자신의 탑에서 소금 조각상이 되어 발견되었다. 아무도 그 조각상을 갈아 팔지는 않았다.']});
+  s.push({art:'beach',place:n,title:k==='d1sea'?'파도를 지켜본 자':'왕관을 부순 자',text:[
+    k==='d1sea'?'당신은 잠수종의 둥근 창 너머로 왕관이 받침대에 놓이는 것을 끝까지 지켜보았다.':'망치질 세 번에 왕관은 흰 가루가 되었다. 바람이 그것을 바다로 실어 갔다.',
+    S.k2>=5?'흰모래항 사람들은 부두에 작은 석상을 세웠다. 소금이 아니라 돌로 만든 것이었다.':'항구를 떠나는 당신을 배웅한 사람은 몇 되지 않았다.',
+    S.wpn==='tide'?'허리에 찬 조수의 대검에서는 언제나 희미한 바다 냄새가 났다.':''],end:k==='d1sea'?'DLC 1 끝 · 파도를 지켜본 자':'DLC 1 끝 · 왕관을 부순 자'});
+  return s;}
+
+document.addEventListener('keydown',e=>{if(e.target.tagName==='INPUT')return;const k=parseInt(e.key,10);if(k>=1&&k<=9){const bs=[...document.querySelectorAll('#ch .choice')].filter(b=>!b.disabled);if(bs[k-1])bs[k-1].click();}});
+
+const hot=window.claude&&window.claude.hot;
+if(hot&&typeof hot.snapshot==='function'){try{hot.snapshot(()=>({S,CUR:C?(S&&S.last):CUR}));}catch(e){}}
+function start(d){if(d&&d.S){S=d.S;const id=d.CUR;if(id&&SC[id]&&id!=='title')go(id);else go(S.last||'home');}else title();}
+hot&&hot.ready?hot.ready(start):start(hot&&hot.data?hot.data:{});
+</script>
+
+</body></html>
